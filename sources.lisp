@@ -91,7 +91,9 @@ See repository-directory"
 
 See git-clone
 See repository-directory"
-  (git-clone (repository-directory repository) repository :depth 1 :submodules T)
+  (let ((dir (repository-directory repository)))
+    (ensure-directories-exist (repository-directory repository))
+    (git-clone dir repository :depth 1 :submodules T))
   T)
 
 (defun redraw-repository (repository)
