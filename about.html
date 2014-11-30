@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8"/>
+    <title>SHIRAKUMO-DIST</title>
+    <style type="text/css">
+      code a{text-decoration:none;}
+      h1{display:inline-block;font-size: 28pt;margin-bottom:0;}
+      code{font-family: Consolas, Inconsolata, monospace;}
+      h4{display: inline-block;margin:0;padding:0;}
+      #symbol-index ul{list-style: none;}
+      .package li{margin-bottom: 20px;}
+      .package pre{margin: 0 0 0 10px; white-space: pre-wrap;}
+      .package .nicknames{font-size: 12pt; font-weight: normal;}
+      table{margin: 20px;}
+      td{padding-bottom: 10px;}
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>shirakumo-dist</h1>
+      <span>1.0.0</span>
+      <p>A toolkit to handle the Shirakumo Quicklisp dist.</p>
+    </header>
+    <div id="content">
+      <article>
+        <c:documentate>
+          <span><h2>About Shirakumo-Dist</h2>
+
+<p>This is an application to help manage the Shirakumo <a href="http://www.quicklisp.org/">Quicklisp</a> dist. It contains a number of tools for handling git repositories and a small wrapper around <a href="https://github.com/orivej/quickdist">Quickdist</a> to run a dist. Some special changes apply for Shirakumo's libraries. You can probably extract most of the tools in here for your own purposes to create a quick and easy dist for your own systems.</p>
+</span>
+        </c:documentate>
+      </article>
+      <article>
+        <h2>Copyright</h2>
+        <span>shirakumo-dist</span> is licensed under the <span><a href="https://tldrlegal.com/search?q=Artistic">Artistic</a></span> license and ©<span>2014</span> <span>Nicolas Hafner &lt;shinmera@tymoon.eu&gt;</span>. This library can be obtained on <a href="https://github.com/Shirakumo/dist">https://github.com/Shirakumo/dist</a>.
+      </article>
+      <article id="symbol-index">
+        <h2>Package Index</h2>
+        <ul><li class="package">
+            <h3>
+              <a name="SHIRAKUMO-DIST" href="#SHIRAKUMO-DIST">SHIRAKUMO-DIST</a>
+              <span class="nicknames">(ORG.SHIRAKUMO.DIST)</span>
+            </h3>
+            <ul><li>
+                <a name="SHIRAKUMO-DIST:ADD-REPOSITORY"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:ADD-REPOSITORY">ADD-REPOSITORY</a></h4>
+                      <span/>
+                      <span>(REPOSITORY &amp;KEY (DUMP T))</span>
+                    </code>
+                  </header>
+                  <pre>Adds repository to the list of repositories if it does not yet exist.
+
+See dump-repositories.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:CREATE-REPOSITORY"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:CREATE-REPOSITORY">CREATE-REPOSITORY</a></h4>
+                      <span/>
+                      <span>(REPOSITORY)</span>
+                    </code>
+                  </header>
+                  <pre>Effectively creates the repository by cloning it.
+
+See git-clone
+See repository-directory</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:DUMP-REPOSITORIES"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:DUMP-REPOSITORIES">DUMP-REPOSITORIES</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Saves the list of *repositories* to the *repositories-file*.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:ENSURE-REPOSITORIES-READY"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:ENSURE-REPOSITORIES-READY">ENSURE-REPOSITORIES-READY</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Makes sure all the repositories are available and up-to-date.
+
+See ensure-repository-read
+See *repositories*</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:ENSURE-REPOSITORY-READY"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:ENSURE-REPOSITORY-READY">ENSURE-REPOSITORY-READY</a></h4>
+                      <span/>
+                      <span>(REPOSITORY)</span>
+                    </code>
+                  </header>
+                  <pre>Ensures that the given repository exists and is up-to-date.
+
+See repository-exists-p
+See redraw-repository
+See create-repository</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:GIT"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:GIT">GIT</a></h4>
+                      <span/>
+                      <span>(COMMANDS &amp;KEY DIRECTORY (OUTPUT T) (ERROR T))</span>
+                    </code>
+                  </header>
+                  <pre>Performs arbitrary GIT commands. See UIOP:RUN-PROGRAM.
+COMMANDS should be a list of command strings. Sub-lists are spliced into the list for convenience.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:GIT-CLONE"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:GIT-CLONE">GIT-CLONE</a></h4>
+                      <span/>
+                      <span>(DIRECTORY REPOSITORY &amp;KEY BRANCH DEPTH SUBMODULES (ERROR T) (OUTPUT T))</span>
+                    </code>
+                  </header>
+                  <pre/>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:GIT-PULL"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:GIT-PULL">GIT-PULL</a></h4>
+                      <span/>
+                      <span>(DIRECTORY &amp;KEY REPOSITORY REFSPEC SUBMODULES ALL DEPTH (ERROR T) (OUTPUT T))</span>
+                    </code>
+                  </header>
+                  <pre/>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:GIT-REPOSITORY-P"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:GIT-REPOSITORY-P">GIT-REPOSITORY-P</a></h4>
+                      <span/>
+                      <span>(DIRECTORY)</span>
+                    </code>
+                  </header>
+                  <pre/>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:GIT-RESET"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:GIT-RESET">GIT-RESET</a></h4>
+                      <span/>
+                      <span>(DIRECTORY &amp;KEY (MODE MIXED) COMMIT (ERROR T) (OUTPUT T))</span>
+                    </code>
+                  </header>
+                  <pre/>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:GIT-REV-PARSE"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:GIT-REV-PARSE">GIT-REV-PARSE</a></h4>
+                      <span/>
+                      <span>(DIRECTORY &amp;KEY REVS-ONLY NO-REVS FLAGS NO-FLAGS DEFAULT SHORT SYMBOLIC
+           SYMBOLIC-FULL-NAME ALL BRANCHES TAGS REMOTES GLOB EXCLUDE
+           DISAMBIGUATE LOCAL-ENV-VARS GIT-DIR IS-INSIDE-GIT-DIR
+           IS-INSIDE-WORK-TREE IS-BARE-REPOSITORY RESOLVE-GIT-DIR SHOW-CDUMP
+           SHOW-PREFIX SHOW-TOPLEVEL SHARED-INDEX-PATH SINCE AFTER UNTIL BEFORE
+           (ERROR T) (OUTPUT T))</span>
+                    </code>
+                  </header>
+                  <pre/>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:GIT-SUBMODULE-UPDATE"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:GIT-SUBMODULE-UPDATE">GIT-SUBMODULE-UPDATE</a></h4>
+                      <span/>
+                      <span>(DIRECTORY &amp;KEY PATH INIT FORCE REMOTE NO-FETCH CHECKOUT MERGE REBASE REFERENCE
+           RECURSIVE DEPTH (ERROR T) (OUTPUT T))</span>
+                    </code>
+                  </header>
+                  <pre/>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:HAVE-REPOSITORY"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:HAVE-REPOSITORY">HAVE-REPOSITORY</a></h4>
+                      <span/>
+                      <span>(REPOSITORY &amp;KEY (TEST #'SEARCH*))</span>
+                    </code>
+                  </header>
+                  <pre>Returns the repository if it has been found in the list by test and NIL otherwise.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:LOAD-REPOSITORIES"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:LOAD-REPOSITORIES">LOAD-REPOSITORIES</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Load the list of repositories from the file.
+
+See *repositories-file*</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:PURGE-ALL-RELEASES"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:PURGE-ALL-RELEASES">PURGE-ALL-RELEASES</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Purges all stored releases. [INTERACTIVE]</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:PURGE-ALL-SOURCES"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:PURGE-ALL-SOURCES">PURGE-ALL-SOURCES</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Purges all stored sources. [INTERACTIVE]</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:PURGE-UNKNOWN-REPOSITORIES"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:PURGE-UNKNOWN-REPOSITORIES">PURGE-UNKNOWN-REPOSITORIES</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Removes all the repository directories under *sources-dir* that aren't
+found in the local *repositories* list by have-repository.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:REDIST"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:REDIST">REDIST</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Creates a new dist by first REDRAWing all sources and then invoking QUICKDIST to create a new release.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:REDRAW"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:REDRAW">REDRAW</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Loads the repository list from disk, purges unknown repositories and then ensures everything is up-to-date.
+
+See load-repositories
+See purge-unknown-repositories
+See ensure-repositories-ready</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:REDRAW-REPOSITORY"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:REDRAW-REPOSITORY">REDRAW-REPOSITORY</a></h4>
+                      <span/>
+                      <span>(REPOSITORY)</span>
+                    </code>
+                  </header>
+                  <pre>Effectively redraws the repository by pulling it.
+
+See git-pull
+See repository-directory</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:REMOVE-REPOSITORY"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:REMOVE-REPOSITORY">REMOVE-REPOSITORY</a></h4>
+                      <span/>
+                      <span>(REPOSITORY &amp;KEY (DUMP T) (TEST #'SEARCH*))</span>
+                    </code>
+                  </header>
+                  <pre>Removes repository from the list of repositories if it matches by the given test.
+
+See search*
+See dump-repositories.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:REPOSITORY-DIRECTORY"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:REPOSITORY-DIRECTORY">REPOSITORY-DIRECTORY</a></h4>
+                      <span/>
+                      <span>(REPOSITORY)</span>
+                    </code>
+                  </header>
+                  <pre>Returns the directory pathname in which the repository is stored.
+
+See *sources-dir*
+See repository-name</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:REPOSITORY-EXISTS-P"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:REPOSITORY-EXISTS-P">REPOSITORY-EXISTS-P</a></h4>
+                      <span/>
+                      <span>(REPOSITORY)</span>
+                    </code>
+                  </header>
+                  <pre>Returns T if the repository's directory exists.
+
+See repository-directory</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:REPOSITORY-NAME"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:REPOSITORY-NAME">REPOSITORY-NAME</a></h4>
+                      <span/>
+                      <span>(REPOSITORY)</span>
+                    </code>
+                  </header>
+                  <pre>Returns the determined name of the repository.
+E.g: https://github.com/example/com.git =&gt; com
+     https://github.com/example/com     =&gt; com</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:SEARCH*"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:SEARCH*">SEARCH*</a></h4>
+                      <span/>
+                      <span>(THING PLACE)</span>
+                    </code>
+                  </header>
+                  <pre>Performs SEARCH with the test set to CHAR-EQUAL.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:START-DIST-SERVER"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:START-DIST-SERVER">START-DIST-SERVER</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Starts the dist server that will serve dist releases if none is active.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:STOP-DIST-SERVER"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:STOP-DIST-SERVER">STOP-DIST-SERVER</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Stops the dist server if one is active.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:TIMESTAMP"/>
+                <article>
+                  <header>
+                    <span>FUNCTION</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:TIMESTAMP">TIMESTAMP</a></h4>
+                      <span/>
+                      <span>(&amp;OPTIONAL (TIME (GET-UNIVERSAL-TIME)))</span>
+                    </code>
+                  </header>
+                  <pre>Returns a timestamp in the following format:
+YYYY.MM.DD-hh:mm:ss-GMT</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:*DIST-NAME*"/>
+                <article>
+                  <header>
+                    <span>SPECIAL</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:*DIST-NAME*">*DIST-NAME*</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>The name of the dist.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:*DIST-URL*"/>
+                <article>
+                  <header>
+                    <span>SPECIAL</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:*DIST-URL*">*DIST-URL*</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>The outside-world-available URL to your dist.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:*RELEASES-DIR*"/>
+                <article>
+                  <header>
+                    <span>SPECIAL</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:*RELEASES-DIR*">*RELEASES-DIR*</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>The directory pathname pointing to where the release information will be stored.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:*REPOSITORIES*"/>
+                <article>
+                  <header>
+                    <span>SPECIAL</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:*REPOSITORIES*">*REPOSITORIES*</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>List of all GIT repository URLs.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:*REPOSITORIES-FILE*"/>
+                <article>
+                  <header>
+                    <span>SPECIAL</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:*REPOSITORIES-FILE*">*REPOSITORIES-FILE*</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>File containing a list of repository URLs.
+The format of the file is simple; each line is a repository URL.
+Spaces are permitted and empty lines or lines starting with a 
+semicolon are ignored.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:*SERVER-PORT*"/>
+                <article>
+                  <header>
+                    <span>SPECIAL</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:*SERVER-PORT*">*SERVER-PORT*</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>Port on which the dist server will run.</pre>
+                </article>
+              </li><li>
+                <a name="SHIRAKUMO-DIST:*SOURCES-DIR*"/>
+                <article>
+                  <header>
+                    <span>SPECIAL</span>
+                    <code>
+                      <h4><a href="#SHIRAKUMO-DIST:*SOURCES-DIR*">*SOURCES-DIR*</a></h4>
+                      <span/>
+                      <span/>
+                    </code>
+                  </header>
+                  <pre>The directory pathname to where the sources from which the dists are built should be stored.</pre>
+                </article>
+              </li></ul>
+          </li></ul>
+      </article>
+    </div>
+  </body>
+</html>

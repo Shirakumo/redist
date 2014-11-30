@@ -1,0 +1,14 @@
+;; Repository dump generated on 2014.11.30 11:42:15
+https://github.com/Shirakumo/chatlog.git
+https://github.com/Shirakumo/db-introspect.git
+https://github.com/Shirakumo/filebox.git
+https://github.com/Shirakumo/keyword-reviews.git
+https://github.com/Shirakumo/manage-users.git
+https://github.com/Shirakumo/plaster.git
+https://github.com/Shirakumo/purplish.git
+https://github.com/Shirakumo/radiance.git
+https://github.com/Shirakumo/radiance-commons.git
+https://github.com/Shirakumo/radiance-core.git
+https://github.com/Shirakumo/radiance-drivers.git
+https://github.com/Shirakumo/radiance-impls.git
+https://github.com/Shirakumo/reader.git
