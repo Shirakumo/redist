@@ -10,7 +10,7 @@
   "Port on which the dist server will run.")
 (defvar *dist-name* "shirakumo"
   "The name of the dist.")
-(defvar *dist-url* "https://dist.tymoon.eu/"
+(defvar *dist-url* "http://dist.tymoon.eu/"
   "The outside-world-available URL to your dist.")
 (defvar *releases-dir*
   (asdf:system-relative-pathname :shirakumo-dist "release" :type :directory)
