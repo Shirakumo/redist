@@ -19,6 +19,7 @@
                (:file "toolkit")
                (:file "git")
                (:file "sources")
-               (:file "dist"))
+               (:file "dist")
+               (:file "test"))
   :depends-on (:quickdist
                :hunchentoot))
