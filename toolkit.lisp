@@ -16,7 +16,7 @@
 (defun timestamp (&optional (time (get-universal-time)))
   "Returns a timestamp in the following format:
 YYYY.MM.DD-hh:mm:ss-GMT"
-  (format NIL "~:@{~4,'0d.~2,'0d.~2,'0d-~2,'0d:~2,'0d:~2,'0d~}-GMT"
+  (format NIL "~:@{~4,'0d.~2,'0d.~2,'0d_~2,'0d-~2,'0d-~2,'0d~}-GMT"
           (subseq (nreverse (multiple-value-list (decode-universal-time time 0))) 3)))
 
 (defun search* (thing place)
