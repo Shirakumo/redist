@@ -11,7 +11,9 @@
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :description "A toolkit to handle the Shirakumo Quicklisp dist."
-  :homepage "https://github.com/Shirakumo/dist"
+  :homepage "https://Shirakumo.github.io/dist/"
+  :bug-tracker "https://github.com/Shirakumo/dist/issues"
+  :source-control (:git "https://github.com/Shirakumo/dist.git")
   :serial T
   :components ((:file "package")
                (:file "toolkit")
