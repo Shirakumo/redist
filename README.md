@@ -10,4 +10,4 @@ Adding a dist to quicklisp is very easy.
 
 And that's it. All software from the dist should now be available for quickloading.
 
-The Shirakumo dist hosted by this primarily contains Radiance and its affiliated projects. They cannot be distributed via the standard quicklisp dist, due to the special loading behaviour that breaks quicklisp requirements. The dist may occasionally also deliver hot-patches for select libraries. It is however not updated on any regular schedule, and does not make any efforts to test compatibility with the rest of the ecosystem at the time of release.
+The Shirakumo dist hosted by this primarily contains Radiance and its affiliated projects. They cannot be distributed via the standard quicklisp dist, due to the special loading behaviour that breaks quicklisp requirements. The Shirakumo dist may occasionally also deliver hot-patches for select libraries. It is however not updated on any regular schedule, and does not make any efforts to test compatibility with the rest of the ecosystem at the time of release.
