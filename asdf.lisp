@@ -25,7 +25,7 @@
   ;; We do some simple walking here. If you do anything more crazy than that, good luck.
   (case (first form)
     ((asdf:defsystem)
-     (push (second form) (cdr acc)))
+     (push (cons (second form) (find-defsystem-dependencies form)) (cdr acc)))
     ((let)
      (dolist (bind (second form))
        (when (listp bind)
@@ -43,7 +43,28 @@
 
 (defmethod walk (form acc))
 
-(defun find-systems (file)
+(defun resolve-dependency (dep)
+  ;; We use ASDF itself as a dummy system here -- we don't actually care about what happens
+  ;; if it's not a foreign dependency, and if you customise how this resolution happens...
+  ;; good luck to ya!
+  (let ((result (ignore-errors
+                 (asdf/defsystem::resolve-dependency-spec (asdf:find-system "asdf") dep))))
+    (typecase result
+      (null)
+      (asdf:system (string (asdf:component-name result)))
+      ((or symbol string) (string result)))))
+
+(defun find-defsystem-dependencies (form)
+  (let ((deps ()))
+    (loop for (k v) on form by #'cddr
+          do (when (find k '(:depends-on :defsystem-depends-on))
+               (loop for depspec in v
+                     for dep = (resolve-dependency depspec)
+                     do (when dep
+                          (push dep deps)))))
+    deps))
+
+(defun find-file-systems (file)
   (with-open-file (stream file)
     (let ((*package* (find-package :asdf/user))
           (eclector.reader:*client* 'reader)
@@ -59,5 +80,5 @@
 
 (defun find-all-systems (root)
   (loop for file in (find-asd-files root)
-        append (loop for system in (find-systems file)
-                     collect (list file (string system)))))
+        append (loop for (system . deps) in (find-file-systems file)
+                     collect (list (string system) file deps))))
