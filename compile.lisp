@@ -37,3 +37,23 @@ system-index-url: ~a"
         (format stream "~a ~a ~a~{ ~a~}~%"
                 (name project) (pathname-name (file system)) (name system)
                 (dependencies system))))))
+
+(defun tar (files output &key (if-exists :error))
+  (archive:with-open-archive (archive output
+                              :direction :output
+                              :if-exists if-exists)
+    (dolist (file files)
+      (let ((entry (archive:create-entry-from-pathname archive file)))
+        (archive:write-entry-to-archive archive entry)))
+    (archive:finalize-archive archive)
+    output))
+
+(defun gz (file output &key (if-exists :error))
+  (salza2:gzip-file file output :if-exists if-exists))
+
+(defun tgz (files output &key (if-exists :error))
+  (let ((tar (make-pathname :type "tar" :defaults output)))
+    (tar files tar :if-exists :error)
+    (unwind-protect
+         (gz tar output :if-exists if-exists)
+      (delete-file tar))))
