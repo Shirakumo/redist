@@ -57,3 +57,13 @@ system-index-url: ~a"
     (unwind-protect
          (gz tar output :if-exists if-exists)
       (delete-file tar))))
+
+(defun md5 (file)
+  (ironclad:byte-array-to-hex-string
+   (ironclad:digest-file :md5 file)))
+
+(defun sha1-contents (tar)
+  (archive:with-open-archive (archive file)
+    (let ((digest (ironclad:make-digest :sha1)))
+      (archive:do-archive-entries (entry archive (ironclad:produce-digest digest))
+        (ironclad:update-digest digest (archive:entry-stream entry))))))
