@@ -5,4 +5,5 @@
 |#
 
 (defpackage #:org.shirakumo.dist
+  (:shadow #:compile)
   (:use #:cl))

@@ -15,6 +15,7 @@
   :source-control (:git "https://github.com/Shirakumo/dist.git")
   :serial T
   :components ((:file "package")
+               (:file "toolkit")
                (:file "asdf")
                (:file "dist")
                (:file "compile"))
