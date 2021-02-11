@@ -19,8 +19,7 @@
                (:file "asdf")
                (:file "dist")
                (:file "compile"))
-  :depends-on (:legit
-               :ironclad
+  :depends-on (:ironclad
                :archive
                :salza2
                :eclector))

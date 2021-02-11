@@ -90,7 +90,7 @@
   (source-files (project release)))
 
 (defclass system ()
-  ((project :initarg :project :initarg (arg! :project) :accessor project)
-   (name :initarg :name :initarg (arg! :name) :accessor name)
-   (file :initarg :file :initarg (arg! :file) :accessor file)
-   (dependencies :initarg :dependencies :initarg (arg! :dependencies) :accessor dependencies)))
+  ((project :initarg :project :initform (arg! :project) :accessor project)
+   (name :initarg :name :initform (arg! :name) :accessor name)
+   (file :initarg :file :initform (arg! :file) :accessor file)
+   (dependencies :initarg :dependencies :initform (arg! :dependencies) :accessor dependencies)))
