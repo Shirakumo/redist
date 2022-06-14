@@ -34,8 +34,8 @@
   (let* ((name (format nil "~a-~a" (quickdist::last-directory source-path) (timestamp)))
          (out-path (make-pathname :name name :type "tgz" :defaults (truename destdir-path))))
     (external-program:run quickdist:*gnutar*
-                          (list "-C" (quickdist::native-namestring source-path) "."
-                                "--exclude" "./.git"
+                          (list "--exclude" "./.git"
+                                "-C" (quickdist::native-namestring source-path) "."
                                 "-czf" (quickdist::native-namestring out-path)
                                 "--transform" (format nil "s#^.#~a#" name))
                           :output *standard-output* :error *error-output*)
