@@ -50,6 +50,7 @@
   (cond
     ((listp form)
      (ecase (first form)
+       (:feature (third form))
        (:version (second form))
        ;; interfaces are strictly skipped
        ;; as they're virtual components
