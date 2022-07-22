@@ -39,10 +39,21 @@ system-index-url: ~a"
 
 (defgeneric compile (thing &key))
 
-(defmethod compile ((dist dist) &rest args &key &allow-other-keys)
-  (apply #'compile (make-release dist) args))
+(defmethod compile ((name symbol) &rest args &key &allow-other-keys)
+  (apply #'compile (dist name) args))
 
-(defmethod compile ((release release) &key output (if-exists :supersede) verbose)
+(defmethod compile ((dist dist) &rest args &key (version (next-version dist)) update verbose &allow-other-keys)
+  (remf args :update)
+  (remf args :version)
+  (let ((release (make-release dist :update update :version version :verbose verbose)))
+    (unwind-protect
+         (multiple-value-prog1 (apply #'compile release args)
+           (setf release NIL))
+      ;; We did not return successfully, so remove the release again.
+      (when release
+        (setf (releases dist) (remove release (releases dist)))))))
+
+(defmethod compile ((release release) &key (output #p "~/dist/releases/") (if-exists :supersede) verbose)
   (ensure-directories-exist output)
   ;; Assemble files
   (dolist (project (projects release))
@@ -56,7 +67,7 @@ system-index-url: ~a"
     (with-open-file (stream (f (releases-path release))
                             :direction :output
                             :if-exists if-exists)
-      (write-releases-index release output stream))
+      (write-release-index release output stream))
     (with-open-file (stream (f (systems-path release))
                             :direction :output
                             :if-exists if-exists)
@@ -64,6 +75,10 @@ system-index-url: ~a"
 
 (defmethod compile ((release project-release) &key output (if-exists :supersede) verbose)
   (when verbose
-    (format T "~& Compiling ~a~%" release))
-  (tgz (source-files release) (ensure-directories-exist (merge-pathnames (path release) output))
-       :if-exists if-exists))
+    (verbose "Compiling ~a" (name (project release))))
+  (handler-bind ((error (lambda (e)
+                          (when verbose
+                            (verbose "~a" e))
+                          (continue e))))
+    (tgz (source-files release) (ensure-directories-exist (merge-pathnames (path release) output))
+         :base (source-directory (project release)) :if-exists if-exists)))

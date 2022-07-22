@@ -6,22 +6,28 @@
 
 (in-package #:org.shirakumo.dist)
 
-(defun tar (files output &key (if-exists :error))
+(defun tar (files output &key (if-exists :error) (base #p"/"))
   (archive:with-open-archive (archive output
                               :direction :output
                               :if-exists if-exists)
-    (dolist (file files)
-      (let ((entry (archive:create-entry-from-pathname archive file)))
-        (archive:write-entry-to-archive archive entry)))
+    (let ((*default-pathname-defaults* base))
+      (dolist (file files)
+        (with-simple-restart (continue "Ignore the failing file.")
+          (let ((entry (archive:create-entry-from-pathname archive (pathname-utils:enough-pathname file base))))
+            (with-open-file (stream file
+                                    :direction :input
+                                    :element-type '(unsigned-byte 8)
+                                    :if-does-not-exist :error)
+              (archive:write-entry-to-archive archive entry :stream stream))))))
     (archive:finalize-archive archive)
     output))
 
 (defun gz (file output &key (if-exists :error))
   (salza2:gzip-file file output :if-exists if-exists))
 
-(defun tgz (files output &key (if-exists :error))
+(defun tgz (files output &key (if-exists :error) (base #p"/"))
   (let ((tar (make-pathname :type "tar" :defaults output)))
-    (tar files tar :if-exists :error)
+    (tar files tar :if-exists :error :base base)
     (unwind-protect
          (gz tar output :if-exists if-exists)
       (delete-file tar))))
