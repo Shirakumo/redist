@@ -101,30 +101,34 @@
   (let* ((name (subseq (url manager) (1+ (position #\/ (url manager) :from-end T))))
          (temp (tempfile)))
     ;; Might as well use these, since we already need all the other binary utilities...
-    (run "curl" "-o" (uiop:native-namestring temp) (url manager))
-    (cond ((or (ends-with ".tar.gz" name)
-               (ends-with ".tgz" name))
-           (run "tar" "-xf" (uiop:native-namestring temp) "-C" "."))
-          ((or (ends-with ".zip" name))
-           (run "unzip" (uiop:native-namestring temp) "-d" "."))
-          ((or (ends-with ".lisp" name)
-               (ends-with ".lsp" name))
-           (let* ((local (merge-pathnames name simple-inferiors:*cwd*))
-                  (name (pathname-name local)))
-             (uiop:copy-file temp local)
-             (with-open-file (stream (make-pathname :type "asd" :defaults local)
-                                     :direction :output
-                                     :if-exists NIL)
-               (when stream
-                 (format stream "~
+    (unwind-protect
+         (progn
+           (run "curl" "-o" (uiop:native-namestring temp) (url manager))
+           (cond ((or (ends-with ".tar.gz" name)
+                      (ends-with ".tgz" name))
+                  (run "tar" "-xf" (uiop:native-namestring temp) "-C" "."))
+                 ((or (ends-with ".zip" name))
+                  (run "unzip" (uiop:native-namestring temp) "-d" "."))
+                 ((or (ends-with ".lisp" name)
+                      (ends-with ".lsp" name))
+                  (let* ((local (merge-pathnames name simple-inferiors:*cwd*))
+                         (name (pathname-name local)))
+                    (uiop:copy-file temp local)
+                    (with-open-file (stream (make-pathname :type "asd" :defaults local)
+                                            :direction :output
+                                            :if-exists NIL)
+                      (when stream
+                        (format stream "~
 ;;;; Automatically generated for a single-file source.
 (asdf:defsystem #:~a
   :homepage ~s
   :source-control (:http ~:*~s)
   :components
   ((:file ~s)))~%" name (url manager) name)))))
-          (T
-           (error "Don't know how to deal with file ~a" name)))))
+                 (T
+                  (error "Don't know how to deal with file ~a" name))))
+      (when (probe-file temp)
+        (delete-file temp)))))
 
 (defmethod update ((manager http) &rest args &key &allow-other-keys)
   (apply #'clone manager args))
