@@ -91,12 +91,14 @@
           (%url-encode stream)))))
 
 (defun run (command &rest args)
-  (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
-                        args))
+  (loop (with-simple-restart (retry "Retry running the program")
+          (return (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
+                                        args)))))
 
 (defun run-string (command &rest args)
-  (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
-                        args :output :string))
+  (loop (with-simple-restart (retry "Retry running the program")
+          (return (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
+                                        args :output :string)))))
 
 (defun prune-plist (plist)
   (loop for (k v) on plist by #'cddr
