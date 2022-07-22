@@ -16,6 +16,9 @@
       eclector.reader:symbol-is-not-external) ()
       (make-placeholder :package package :name symbol))))
 
+(defmethod eclector.reader:evaluate-expression ((client (eql 'reader)) expr)
+  NIL)
+
 (defmethod walk :around (form acc)
   (handler-case (call-next-method)
     (error (e)
@@ -47,12 +50,18 @@
   ;; We use ASDF itself as a dummy system here -- we don't actually care about what happens
   ;; if it's not a foreign dependency, and if you customise how this resolution happens...
   ;; good luck to ya!
-  (let ((result (ignore-errors
-                 (asdf/defsystem::resolve-dependency-spec (asdf:find-system "asdf") dep))))
-    (typecase result
-      (null)
-      (asdf:system (string (asdf:component-name result)))
-      ((or symbol string) (string result)))))
+  (typecase dep
+    (null)
+    (asdf:system (string (asdf:component-name dep)))
+    (string dep)
+    (symbol (string-downcase dep))
+    (cons
+     (resolve-dependency
+      (case (first dep)
+        (:feature (third dep))
+        (:version (second dep))
+        (:require NIL)
+        (T (ignore-errors (asdf/defsystem::resolve-dependency-spec (asdf:find-system "asdf") dep))))))))
 
 (defun find-defsystem-dependencies (form)
   (let ((deps ()))

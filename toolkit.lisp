@@ -39,3 +39,60 @@
 (defun file-size (file)
   (with-open-file (stream file :element-type '(unsigned-byte 8))
     (file-length stream)))
+
+(defun tempfile ()
+  (make-pathname :name (format NIL "~36r-~36r" (get-universal-time) (random #xFFFFFFFFFFFFFFFF))
+                 :type "dat"
+                 :defaults (uiop:temporary-directory)))
+
+(defun ensure-instance (instance type &rest initargs)
+  (cond ((null instance)
+         (apply #'make-instance type initargs))
+        ((eql type (type-of instance))
+         (apply #'reinitialize-instance instance initargs))
+        (T
+         (apply #'change-class instance type initargs))))
+
+(defun split (split string)
+  (let ((parts ()) (buffer (make-string-output-stream)))
+    (flet ((maybe-output ()
+             (let ((part (get-output-stream-string buffer)))
+               (when (string/= part "") (push part parts)))))
+      (loop for char across string
+            do (if (char= char split)
+                   (maybe-output)
+                   (write-char char buffer))
+            finally (maybe-output))
+      (nreverse parts))))
+
+(defun ends-with (end string)
+  (and (<= (length end) (length string))
+       (string= end string :start2 (- (length string) (length end)))))
+
+(defun url-encode (thing &key (stream NIL) (external-format :utf-8) (allowed "-._~"))
+  (flet ((%url-encode (stream)
+           (loop for octet across (babel:string-to-octets thing :encoding external-format)
+                 for char = (code-char octet)
+                 do (cond ((or (char<= #\0 char #\9)
+                               (char<= #\a char #\z)
+                               (char<= #\A char #\Z)
+                               (find char allowed :test #'char=))
+                           (write-char char stream))
+                          (T (format stream "%~2,'0x" (char-code char)))))))
+    (if stream
+        (%url-encode stream)
+        (with-output-to-string (stream)
+          (%url-encode stream)))))
+
+(defun run (command &rest args)
+  (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
+                        args))
+
+(defun run-string (command &rest args)
+  (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
+                        args :output :string))
+
+(defun prune-plist (plist)
+  (loop for (k v) on plist by #'cddr
+        when v collect k
+        when v collect v))

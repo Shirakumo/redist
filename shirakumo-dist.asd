@@ -18,8 +18,16 @@
                (:file "toolkit")
                (:file "asdf")
                (:file "dist")
+               (:file "persistence")
+               (:file "sources")
+               (:file "ql-support")
                (:file "compile"))
   :depends-on (:ironclad
+               :shasht
+               :babel
                :archive
                :salza2
-               :eclector))
+               :eclector
+               :simple-inferiors
+               :pathname-utils
+               :uiop))
