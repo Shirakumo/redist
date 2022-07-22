@@ -64,9 +64,6 @@
   (or (find-release version dist)
       (make-release dist :version version)))
 
-(defmethod ensure-release ((release release) (dist dist))
-  release)
-
 (defmethod ensure-release ((spec cons) (dist dist))
   (destructuring-bind (version &rest args) spec
     (apply #'ensure-instance
@@ -293,8 +290,8 @@
 (defmethod (setf projects) :around (projects (release release))
   (call-next-method (loop for project in projects collect (ensure-project-release project release)) release))
 
-(defmethod ensure-project-release ((project project-release) (release release))
-  project)
+(defmethod ensure-release ((release release) (dist dist))
+  release)
 
 (defmethod ensure-project-release ((project project) (release release))
   (make-release project :release release))
@@ -347,6 +344,9 @@
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
     (format stream "~a ~a" (name (project release)) (version (release release)))))
+
+(defmethod ensure-project-release ((project project-release) (release release))
+  project)
 
 (defmethod name ((release project-release))
   (name (project release)))
