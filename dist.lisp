@@ -192,18 +192,20 @@
                  :project project
                  :release release))
 
-(defun match-file-p (file pattern)
+(defun file-match-p (file pattern)
   (if (pathname-utils:absolute-p pattern)
       (pathname-utils:subpath-p (pathname-utils:to-absolute file) pattern)
-      ;; FIXME: match end of FILE against PATTERN
-      ))
+      (loop thereis (pathname-utils:pathname= file pattern)
+            while (rest (pathname-directory file))
+            do (let ((rest (cddr (pathname-directory file))))
+                 (setf file (make-pathname :directory (if rest (list* :relative rest)) :defaults file))))))
 
 (defun gather-sources (base &optional exclude)
   (let ((base (truename base)))
     (loop for file in (directory (merge-pathnames (make-pathname :name :wild :type :wild :directory '(:relative :wild-inferiors)) base))
           for relative = (pathname-utils:enough-pathname file base)
           unless (loop for excluded in exclude
-                       thereis (match-file-p relative excluded))
+                       thereis (file-match-p relative excluded))
           collect file)))
 
 (defmethod source-files ((project project))
