@@ -14,15 +14,13 @@
       eclector.reader:package-does-not-exist
       eclector.reader:symbol-does-not-exist
       eclector.reader:symbol-is-not-external) ()
-      (make-placeholder :package package :name symbol))))
+      (intern symbol "KEYWORD"))))
+
+(defmethod eclector.reader:find-character ((client (eql 'reader)) name)
+  (or (name-char name) (code-char #xFFFD)))
 
 (defmethod eclector.reader:evaluate-expression ((client (eql 'reader)) expr)
   NIL)
-
-(defmethod walk :around (form acc)
-  (handler-case (call-next-method)
-    (error (e)
-      (format T "~& Failed to walk form:~%  ~a~%Failure: ~a" form e))))
 
 (defmethod walk ((form cons) acc)
   ;; We do some simple walking here. If you do anything more crazy than that, good luck.
@@ -41,8 +39,8 @@
        (walk part acc)))
     ((defmacro defun defvar defparameter defgeneric defmethod defclass defstruct))
     (T
-     (dolist (part (cdr form))
-       (walk part acc)))))
+     (walk (car form) acc)
+     (walk (cdr form) acc))))
 
 (defmethod walk (form acc))
 
@@ -66,7 +64,8 @@
 (defun find-defsystem-dependencies (form)
   (let ((deps ()))
     (loop for (k v) on form by #'cddr
-          do (when (find k '(:depends-on :defsystem-depends-on))
+          do (when (and (find k '(:depends-on :defsystem-depends-on))
+                        (typep v 'list))
                (loop for depspec in v
                      for dep = (resolve-dependency depspec)
                      do (when dep
