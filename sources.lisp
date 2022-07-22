@@ -9,11 +9,11 @@
 (defclass cvs (source-manager)
   ())
 
-(defmethod clone ((manager cvs) &key (version "1 second ago"))
-  (run "cvs" "-d" (url manager) "checkout" "-D" version "."))
+(defmethod clone ((manager cvs) &key version)
+  (run "cvs" "-d" (url manager) "checkout" "-D" (or version "1 second ago") "."))
 
-(defmethod update ((manager cvs) &key (version "1 second ago"))
-  (run "cvs" "-d" (url manager) "update" "-d" "-D" version))
+(defmethod update ((manager cvs) &key version)
+  (run "cvs" "-d" (url manager) "update" "-d" "-D" (or version "1 second ago")))
 
 (defmethod version ((cvs cvs))
   "?")
@@ -21,11 +21,11 @@
 (defclass svn (source-manager)
   ())
 
-(defmethod clone ((manager svn) &key (version "HEAD"))
-  (run "svn" "checkout" "-r" version (url manager) "."))
+(defmethod clone ((manager svn) &key version)
+  (run "svn" "checkout" "-r" (or version "HEAD") (url manager) "."))
 
-(defmethod update ((manager svn) &key (version "HEAD"))
-  (run "svn" "update" "-r" version "."))
+(defmethod update ((manager svn) &key version)
+  (run "svn" "update" "-r" (or version "HEAD") "."))
 
 (defmethod version ((manager svn))
   (run-string "svn" "info" "--show-item" "last-changed-revision"))
@@ -79,7 +79,7 @@
       (run "git" "clone" "--branch" (branch manager) (url manager) ".")
       (run "git" "clone" (url manager) "."))
   (when (or version (tag manager))
-    (run "git" "reset" "--hard" (or version (tag manager)))))
+    (update manager :version version)))
 
 (defmethod update ((manager git) &key version)
   (run "git" "fetch" "origin")

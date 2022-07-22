@@ -7,6 +7,16 @@
 (in-package #:org.shirakumo.dist)
 
 (defvar *string-type-parse-hooks* ())
+(defvar *excluded-paths* '(#p".git/"
+                           #p".gitignore"
+                           #p".gitattributes"
+                           #p".svn/"
+                           #p".hg/"
+                           #p".hgignore"
+                           #p".hgtags"
+                           #p"CVS/"
+                           #p"CVSROOT/"
+                           #p"_darcs/"))
 
 (defgeneric make-release (thing &key))
 (defgeneric find-project (name dist))
@@ -54,22 +64,28 @@
   (or (find-release version dist)
       (make-release dist :version version)))
 
+(defmethod ensure-release ((release release) (dist dist))
+  release)
+
 (defmethod ensure-release ((spec cons) (dist dist))
   (destructuring-bind (version &rest args) spec
     (apply #'ensure-instance
            (find-release version dist) 'release
            (list* :version version args))))
 
-(defmethod make-release ((dist dist) &key (version (next-version dist)))
+(defmethod make-release ((dist dist) &key (version (next-version dist)) update verbose)
   (let ((prior (find version (releases dist) :key #'version :test #'equal)))
     (when prior
       (cerror "Replace the existing release" "A release with version ~a already exists on ~a:~%  ~a"
               version dist prior)
       (setf (releases dist) (remove prior (releases dist)))))
-  (push (make-instance 'release
-                       :dist dist
-                       :version version)
-        (releases dist)))
+  (let ((release (make-instance 'release
+                                :dist dist
+                                :version version
+                                :update update
+                                :verbose verbose)))
+    (push release (releases dist))
+    release))
 
 (defmethod find-project ((name symbol) (dist dist))
   (find-project (string name) dist))
@@ -140,6 +156,18 @@
 (defgeneric update (manager &key))
 (defgeneric clone (manager &key))
 
+(defmethod clone :before ((manager source-manager) &key verbose)
+  (when verbose
+    (verbose "Cloning from ~a" (url manager))))
+
+(defmethod update :before ((manager source-manager) &key verbose)
+  (when verbose
+    (verbose "Updating from ~a" (url manager))))
+
+(defmethod update :around ((manager source-manager) &key &allow-other-keys)
+  (with-simple-restart (continue "Ignore the update and continue as if it had happened.")
+    (call-next-method)))
+
 (defclass project ()
   ((name :initarg :name :initform (arg! :name) :accessor name)
    (source-directory :initarg :source-directory :initform (arg! :source-directory) :accessor source-directory)
@@ -148,25 +176,39 @@
    (excluded-systems :initarg :excluded-systems :initform () :accessor excluded-systems)
    (excluded-paths :initarg :excluded-paths :initform () :accessor excluded-paths)))
 
-(defmethod initialize-instance :after ((project project) &key)
+(defmethod shared-initialize :after ((project project) slots &key)
   (when (and (sources project) (not (probe-file (source-directory project))))
-    (clone project)))
+    (clone project :verbose T)))
 
 (defmethod print-object ((project project) stream)
   (print-unreadable-object (project stream :type T)
     (format stream "~a ~:[INACTIVE~;ACTIVE~]" (name project) (active-p project))))
 
-(defmethod make-release ((project project) &key release)
+(defmethod make-release ((project project) &key release dist update version verbose)
+  (when update
+    (update project :version version :verbose verbose))
   (make-instance 'project-release
+                 :dist dist
                  :project project
                  :release release))
 
+(defun match-file-p (file pattern)
+  (if (pathname-utils:absolute-p pattern)
+      (pathname-utils:subpath-p (pathname-utils:to-absolute file) pattern)
+      ;; FIXME: match end of FILE against PATTERN
+      ))
+
+(defun gather-sources (base &optional exclude)
+  (let ((base (truename base)))
+    (loop for file in (directory (merge-pathnames (make-pathname :name :wild :type :wild :directory '(:relative :wild-inferiors)) base))
+          for relative = (pathname-utils:enough-pathname file base)
+          unless (loop for excluded in exclude
+                       thereis (match-file-p relative excluded))
+          collect file)))
+
 (defmethod source-files ((project project))
-  (loop for file in (directory (merge-pathnames (make-pathname :name :wild :type :wild :directory '(:relative :wild-inferiors))
-                                                (source-directory project)))
-        unless (loop for excluded in (excluded-paths project)
-                     thereis (pathname-utils:subpath-p file excluded))
-        collect file))
+  (gather-sources (source-directory project) (append (excluded-paths project)
+                                                     *excluded-paths*)))
 
 (defmethod systems ((project project))
   (loop for asd in (loop for file in (source-files project)
@@ -191,7 +233,8 @@
       (cerror "Replace the existing project" "A project with name ~a already exists on ~a:~%  ~a"
               (name project) dist prior)
       (setf (projects dist) (remove prior (projects dist)))))
-  (push project (projects dist)))
+  (push project (projects dist))
+  project)
 
 (defmethod add-project ((pathname pathname) (dist dist))
   (let ((name (car (last (pathname-directory pathname)))))
@@ -231,12 +274,15 @@
 (defmethod shared-initialize :after ((release release) slots &key (projects NIL projects-p))
   (when projects-p (setf (projects release) projects)))
 
-(defmethod initialize-instance :after ((release release) &key dist)
+(defmethod initialize-instance :after ((release release) &key dist update verbose)
   (unless (slot-boundp release 'projects)
     (setf (projects release)
           (loop for project in (projects dist)
                 when (active-p project)
-                collect (make-release project :release release)))))
+                collect (progn
+                          (when verbose
+                            (verbose "Processing ~a" (name project)))
+                          (make-release project :dist dist :release release :update update :verbose verbose))))))
 
 (defmethod print-object ((release release) stream)
   (print-unreadable-object (release stream :type T)
@@ -281,9 +327,12 @@
    (systems :initarg :systems :accessor systems)
    (source-files :initarg :source-files :accessor source-files)))
 
-(defmethod initialize-instance :after ((release project-release) &key)
+(defmethod initialize-instance :after ((release project-release) &key dist)
   (unless (slot-boundp release 'source-files)
-    (setf (source-files release) (source-files (project release))))
+    (setf (source-files release) (gather-sources (source-directory (project release))
+                                                 (append (excluded-paths (project release))
+                                                         (excluded-paths dist)
+                                                         *excluded-paths*))))
   (unless (slot-boundp release 'systems)
     (setf (systems release)
           (loop for asd in (loop for file in (source-files release)

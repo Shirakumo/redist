@@ -102,3 +102,6 @@
   (loop for (k v) on plist by #'cddr
         when v collect k
         when v collect v))
+
+(defun verbose (format &rest args)
+  (format *error-output* "~&; ~?~%" format args))
