@@ -174,7 +174,9 @@
    (excluded-paths :initarg :excluded-paths :initform () :accessor excluded-paths)))
 
 (defmethod shared-initialize :after ((project project) slots &key)
-  (when (and (sources project) (not (probe-file (source-directory project))))
+  (when (and (sources project)
+             (or (not (probe-file (source-directory project)))
+                 (null (directory (merge-pathnames pathname-utils:*wild-path* (source-directory project))))))
     (clone project :verbose T)))
 
 (defmethod print-object ((project project) stream)
