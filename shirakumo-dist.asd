@@ -21,7 +21,8 @@
                (:file "persistence")
                (:file "sources")
                (:file "ql-support")
-               (:file "compile"))
+               (:file "compile")
+               (:file "documentation"))
   :depends-on (:ironclad
                :shasht
                :babel
@@ -30,4 +31,5 @@
                :eclector
                :simple-inferiors
                :pathname-utils
-               :uiop))
+               :uiop
+               :documentation-utils))
