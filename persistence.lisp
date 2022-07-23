@@ -40,6 +40,7 @@
         :projects (mapcar #'serialize (projects release))))
 
 (defmethod serialize append ((release project-release))
+  ;; FIXME: persisting instances that are inherited from prior releases
   (list (name (project release))
         :version (version release)
         :source-files (source-files release)

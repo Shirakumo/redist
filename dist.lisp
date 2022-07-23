@@ -6,7 +6,6 @@
 
 (in-package #:org.shirakumo.dist)
 
-(defvar *string-type-parse-hooks* ())
 (defvar *excluded-paths* '(#p".git/"
                            #p".github/"
                            #p".gitignore"

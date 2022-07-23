@@ -6,8 +6,6 @@
 
 (in-package #:org.shirakumo.dist)
 
-(defstruct placeholder name package)
-
 (defmethod eclector.reader:interpret-symbol ((client (eql 'reader)) in package symbol intern)
   (handler-case (call-next-method)
     ((or
