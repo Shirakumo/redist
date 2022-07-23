@@ -1,0 +1,42 @@
+# About Shirakumo-Dist
+This is a system implementing facilities to produce Quicklisp distributions. Specifically, it implements the following:
+
+1. Scanning of ASD files to discover system definitions and dependencies, //without// having to load the ASD or any systems in question.
+2. A protocol to describe the objects related to dists, projects, and releases.
+3. A mechanism to serialise and restore these objects to retain the information across images.
+4. Integrations with source control systems to both clone and update project source files.
+5. Parsers for the "quicklisp-projects"(https://github.com/quicklisp/quicklisp-projects) information, making it possible to create a dist just like the official "quicklisp" dist.
+6. A compiler that takes the project source files and dist information to produce the tarballs and metadata files Quicklisp expects for a dist. Ultimately you can just point an HTTP server at the output directory and your dist setup is complete.
+7. A testing system to allow compiling each of the systems in a dist release, and verify that they still perform as expected.
+
+## Quickstart
+Creating your own dist is rather simple:
+
+:: common lisp
+(dist:define-dist my-dist (:url "http://my.public.url")
+  ("my-project" ((:git :url "https://github.com/someone/my-project.git")))
+  ("other-project" ((:http :url "https://someone.com/project.tgz"))))
+::
+
+This will create the ``dist`` object including ``project``s and clone their sources to disk. If there's any problems with the cloning process, it will signal an error and allow you to continue in several ways.
+
+Once a dist is set up, you'll want to serialise its current configuration to disk to ensure you can restore it at a later point when you want to update it.
+
+:: common lisp
+(dist:persist) ; To save the info to disk
+(dist:restore) ; To restore the saved info
+::
+
+Once you have the dist set up with all the projects you'd like, it is time to make a release. To do so, simply call ``compile``.
+
+:: common lisp
+(dist:compile 'my-dist)
+::
+
+This will produce the necessary tarballs and metadata files. All you have to do now to make it accessible, is to point an HTTP server at the URL you declared earlier to the ``releases`` directory.
+
+Note that as of now, the Quicklisp client cannot talk HTTPS, so you must make your server accessible over plain HTTP.
+
+Should you want to add or remove projects later, you can simply redefine your dist, or use the functions ``add-project`` and ``remove-project``, if you prefer.
+
+If you would like to produce a dist from the official "quicklisp-projects"(https://github.com/quicklisp/quicklisp-projects), simply clone that repository and load its data in via ``parse-quicklisp-projects``. Be careful though, cloning all the repositories takes quite a while, and a few of the links have since broken.
