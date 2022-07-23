@@ -41,6 +41,7 @@
 
 (defmethod serialize append ((release project-release))
   (list (name (project release))
+        :version (version release)
         :source-files (source-files release)
         :systems (mapcar #'serialize (systems release))))
 

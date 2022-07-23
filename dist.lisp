@@ -139,7 +139,7 @@
 
 (defmethod next-version ((dist timestamp-versioned-dist))
   (multiple-value-bind (s m h dd mm yy) (decode-universal-time (get-universal-time) 0)
-    (format NIL "~4,'0d.~2,'0d.~2,'0d ~2,'0d:~2,'0d:~2,'0d" yy mm dd h m s)))
+    (format NIL "~4,'0d.~2,'0d.~2,'0d-~2,'0d:~2,'0d:~2,'0d" yy mm dd h m s)))
 
 (defclass source-manager ()
   ((url :initarg :url :initform (arg! :url) :accessor url)))
@@ -163,6 +163,9 @@
 (defmethod update :around ((manager source-manager) &key &allow-other-keys)
   (with-simple-restart (continue "Ignore the update and continue as if it had happened.")
     (call-next-method)))
+
+(defmethod version ((manager source-manager))
+  (digest (gather-sources simple-inferiors:*cwd*) :sha1))
 
 (defclass project ()
   ((name :initarg :name :initform (arg! :name) :accessor name)
@@ -190,12 +193,18 @@
 (defmethod make-release ((project project) &key release dist update version verbose)
   (when verbose
     (verbose "Processing ~a" (name project)))
-  (when update
+  (when (or update version)
     (update project :version version :verbose verbose))
-  (make-instance 'project-release
-                 :dist dist
-                 :project project
-                 :release release))
+  (let ((version (version project))
+        (prior (loop for release in (releases dist)
+                     thereis (find-project project release))))
+    (if (or (null prior) (not (equal version (version prior))))
+        (make-instance 'project-release
+                       :dist dist
+                       :project project
+                       :release release
+                       :version version)
+        prior)))
 
 (defmethod source-files ((project project))
   (gather-sources (source-directory project) (append (excluded-paths project)
@@ -297,6 +306,12 @@
                      :systems (loop for (name . args) in systems
                                     collect (apply #'make-instance 'system :project project :name name args))))))
 
+(defmethod find-project ((project project) (release release))
+  (find project (projects release) :key #'project))
+
+(defmethod find-project (name (release release))
+  (find name (projects release) :key #'name :test #'equalp))
+
 (defmethod releases-url ((release release))
   (format NIL "~a/~a" (url (dist release)) (namestring (releases-path release))))
 
@@ -313,6 +328,7 @@
   ((dist :initarg :dist :initform (arg! :dist) :accessor dist)
    (project :initarg :project :initform (arg! :project) :accessor project)
    (release :initarg :release :initform (arg! :release) :accessor release)
+   (version :initarg :version :initform (arg! :version) :accessor version)
    (systems :initarg :systems :accessor systems)
    (source-files :initarg :source-files :accessor source-files)))
 
@@ -341,14 +357,12 @@
 (defmethod name ((release project-release))
   (name (project release)))
 
-(defmethod version ((release project-release))
-  (version (release release)))
-
 (defmethod url ((release project-release))
-  (format NIL "~a/~a" (url (dist release)) (namestring (path release))))
+  (format NIL "~a/~a" (url (dist release)) (uiop:unix-namestring (path release))))
 
 (defmethod path ((release project-release))
-  (make-pathname :name (name release) :type "tgz" :directory `(:relative ,(version (release release)))))
+  (make-pathname :name (format NIL "~a-~a" (name release) (version release))
+                 :type "tgz" :directory `(:relative "archives" ,(name release))))
 
 (defmethod prefix ((release project-release))
   (format NIL "~a-~a" (name release) (version release)))

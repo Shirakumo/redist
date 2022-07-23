@@ -15,9 +15,6 @@
 (defmethod update ((manager cvs) &key version)
   (run "cvs" "-d" (url manager) "update" "-d" "-D" (or version "1 second ago")))
 
-(defmethod version ((cvs cvs))
-  "?")
-
 (defclass svn (source-manager)
   ())
 
@@ -142,7 +139,7 @@
                             " ")))
     (if (string/= last "")
         last
-        (digest (gather-sources simple-inferiors:*cwd*) :sha1))))
+        (call-next-method))))
 
 (defclass github (git)
   ((track :initarg :track :initform (arg! :track) :accessor track)))

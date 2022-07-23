@@ -28,7 +28,7 @@ system-index-url: ~a"
               (digest file :md5)
               (digest (source-files project) :sha1)
               (prefix project)
-              (remove-duplicates (mapcar #'name (systems project)) :test #'string=)))))
+              (remove-duplicates (loop for system in (systems project) collect (file-namestring (file system))) :test #'string=)))))
 
 (defun write-system-index (release stream)
   (format stream "# project system-file system-name [dependency1..dependencyN]~%")
@@ -63,7 +63,7 @@ system-index-url: ~a"
   (dolist (project (projects release))
     (compile project :output output :if-exists if-exists :verbose verbose))
   (flet ((f (&rest format)
-           (merge-pathnames (apply #'format NIL format) output)))
+           (ensure-directories-exist (merge-pathnames (apply #'format NIL format) output))))
     (with-open-file (stream (f "~(~a~).txt" (name (dist release)))
                             :direction :output
                             :if-exists if-exists)
