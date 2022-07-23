@@ -93,12 +93,12 @@
 (defun run (command &rest args)
   (loop (with-simple-restart (retry "Retry running the program")
           (return (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
-                                        args)))))
+                                        args :on-non-zero-exit :error)))))
 
 (defun run-string (command &rest args)
   (loop (with-simple-restart (retry "Retry running the program")
           (return (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
-                                        args :output :string)))))
+                                        args :on-non-zero-exit :error :output :string)))))
 
 (defun prune-plist (plist)
   (loop for (k v) on plist by #'cddr

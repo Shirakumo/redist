@@ -155,7 +155,7 @@
 
 (defmethod clone :before ((manager source-manager) &key verbose)
   (when verbose
-    (verbose "Cloning from ~a" (url manager))))
+    (verbose "Cloning from ~a ~a" (type-of manager) (url manager))))
 
 (defmethod update :before ((manager source-manager) &key verbose)
   (when verbose
@@ -175,9 +175,14 @@
 
 (defmethod shared-initialize :after ((project project) slots &key)
   (when (and (sources project)
+             (active-p project)
              (or (not (probe-file (source-directory project)))
                  (null (directory (merge-pathnames pathname-utils:*wild-path* (source-directory project))))))
-    (clone project :verbose T)))
+    (restart-case
+        (clone project :verbose T)
+      (deactivate ()
+        :report "Deactivate the project"
+        (setf (active-p project) NIL)))))
 
 (defmethod print-object ((project project) stream)
   (print-unreadable-object (project stream :type T)

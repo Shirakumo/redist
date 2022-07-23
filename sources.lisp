@@ -35,6 +35,7 @@
 
 (defmethod clone ((manager darcs) &key version)
   (let ((name (pathname-utils:directory-name simple-inferiors:*cwd*)))
+    (uiop:delete-empty-directory simple-inferiors:*cwd*)
     (simple-inferiors:with-chdir ((pathname-utils:parent simple-inferiors:*cwd*))
       (if version
           (run "darcs" "clone" "--tag" version (url manager) name)
@@ -103,7 +104,7 @@
     ;; Might as well use these, since we already need all the other binary utilities...
     (unwind-protect
          (progn
-           (run "curl" "-o" (uiop:native-namestring temp) (url manager))
+           (run "curl" "-L" "-o" (uiop:native-namestring temp) (url manager))
            (cond ((or (ends-with ".tar.gz" name)
                       (ends-with ".tgz" name))
                   (run "tar" "-xf" (uiop:native-namestring temp) "-C" "."))
