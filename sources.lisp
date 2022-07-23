@@ -131,16 +131,6 @@
 (defmethod update ((manager http) &rest args &key &allow-other-keys)
   (apply #'clone manager args))
 
-(defmethod version ((manager http))
-  (let* ((data (run-string "curl" "-sI" (url manager)))
-         (pos (search "last-modified:" data :test #'char-equal))
-         (last (string-trim (subseq data (+ pos (length "last-modified:"))
-                                    (position #\Return data :start pos))
-                            " ")))
-    (if (string/= last "")
-        last
-        (call-next-method))))
-
 (defclass github (git)
   ((track :initarg :track :initform (arg! :track) :accessor track)))
 
