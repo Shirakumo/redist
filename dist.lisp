@@ -8,6 +8,7 @@
 
 (defvar *string-type-parse-hooks* ())
 (defvar *excluded-paths* '(#p".git/"
+                           #p".github/"
                            #p".gitignore"
                            #p".gitattributes"
                            #p".svn/"
@@ -16,7 +17,8 @@
                            #p".hgtags"
                            #p"CVS/"
                            #p"CVSROOT/"
-                           #p"_darcs/"))
+                           #p"_darcs/"
+                           #p".travis.yml"))
 
 (defgeneric make-release (thing &key))
 (defgeneric find-project (name dist))
