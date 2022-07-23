@@ -136,10 +136,13 @@
 
 (defmethod version ((manager http))
   (let* ((data (run-string "curl" "-sI" (url manager)))
-         (pos (search "last-modified:" data :test #'char-equal)))
-    (string-trim (subseq data (+ pos (length "last-modified:"))
-                         (position #\Return data :start pos))
-                 " ")))
+         (pos (search "last-modified:" data :test #'char-equal))
+         (last (string-trim (subseq data (+ pos (length "last-modified:"))
+                                    (position #\Return data :start pos))
+                            " ")))
+    (if (string/= last "")
+        last
+        (digest (gather-sources simple-inferiors:*cwd*) :sha1))))
 
 (defclass github (git)
   ((track :initarg :track :initform (arg! :track) :accessor track)))
