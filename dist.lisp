@@ -31,6 +31,9 @@
   (:method ((a real) (b real)) (< a b))
   (:method ((a string) (b string)) (string< a b)))
 
+(defun version> (a b)
+  (version< b a))
+
 (defclass dist ()
   ((name :initarg :name :initform (arg! :dist) :accessor name)
    (url :initarg :url :initform (arg! :url) :accessor url)
@@ -47,7 +50,7 @@
     (format stream "~s ~a" (name dist) (url dist))))
 
 (defmethod (setf releases) :around (releases (dist dist))
-  (call-next-method (sort (loop for release in releases collect (ensure-release release dist)) #'version< :key #'version) dist))
+  (call-next-method (sort (loop for release in releases collect (ensure-release release dist)) #'version> :key #'version) dist))
 
 (defmethod (setf projects) :around (projects (dist dist))
   (let ((new (loop for project in projects collect (ensure-project project dist))))
@@ -296,16 +299,19 @@
   (make-release project :dist (dist release) :release release))
 
 (defmethod ensure-project-release ((spec cons) (release release))
-  (destructuring-bind (project &key source-files systems) spec
+  (destructuring-bind (project &rest initargs) spec
     (let ((project (or (find-project project (dist release))
                        (error "No project named~%  ~s~%present on dist ~s!"
-                              project (dist release)))))
-      (make-instance 'project-release
-                     :project project
-                     :release release
-                     :source-files source-files
-                     :systems (loop for (name . args) in systems
-                                    collect (apply #'make-instance 'system :project project :name name args))))))
+                              project (dist release))))
+          (systems (getf initargs :systems)))
+      (remf initargs :systems)
+      (ensure-instance (find-project project release)
+                       'project-release
+                       (list* :project project
+                              :release release
+                              :systems (loop for (name . args) in systems
+                                             collect (apply #'make-instance 'system :project project :name name args))
+                              initargs)))))
 
 (defmethod find-project ((project project) (release release))
   (find project (projects release) :key #'project))
