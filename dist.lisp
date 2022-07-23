@@ -70,17 +70,16 @@
            (find-release version dist) 'release
            (list* :version version args))))
 
-(defmethod make-release ((dist dist) &key (version (next-version dist)) update verbose)
+(defmethod make-release ((dist dist) &key (version (next-version dist)) update verbose (projects NIL projects-p))
   (let ((prior (find version (releases dist) :key #'version :test #'equal)))
     (when prior
       (cerror "Replace the existing release" "A release with version ~a already exists on ~a:~%  ~a"
               version dist prior)
       (setf (releases dist) (remove prior (releases dist)))))
-  (let ((release (make-instance 'release
-                                :dist dist
-                                :version version
-                                :update update
-                                :verbose verbose)))
+  (let ((release (if projects-p
+                     (let ((projects (loop for project in projects collect (ensure-project project dist))))
+                       (make-instance 'release :dist dist :version version :update update :verbose verbose :projects projects))
+                     (make-instance 'release :dist dist :version version :update update :verbose verbose))))
     (push release (releases dist))
     release))
 
@@ -189,28 +188,14 @@
     (format stream "~a ~:[INACTIVE~;ACTIVE~]" (name project) (active-p project))))
 
 (defmethod make-release ((project project) &key release dist update version verbose)
+  (when verbose
+    (verbose "Processing ~a" (name project)))
   (when update
     (update project :version version :verbose verbose))
   (make-instance 'project-release
                  :dist dist
                  :project project
                  :release release))
-
-(defun file-match-p (file pattern)
-  (if (pathname-utils:absolute-p pattern)
-      (pathname-utils:subpath-p (pathname-utils:to-absolute file) pattern)
-      (loop thereis (pathname-utils:pathname= file pattern)
-            while (rest (pathname-directory file))
-            do (let ((rest (cddr (pathname-directory file))))
-                 (setf file (make-pathname :directory (if rest (list* :relative rest)) :defaults file))))))
-
-(defun gather-sources (base &optional exclude)
-  (let ((base (truename base)))
-    (loop for file in (directory (merge-pathnames (make-pathname :name :wild :type :wild :directory '(:relative :wild-inferiors)) base))
-          for relative = (pathname-utils:enough-pathname file base)
-          unless (loop for excluded in exclude
-                       thereis (file-match-p relative excluded))
-          collect file)))
 
 (defmethod source-files ((project project))
   (gather-sources (source-directory project) (append (excluded-paths project)
@@ -285,10 +270,7 @@
     (setf (projects release)
           (loop for project in (projects dist)
                 when (active-p project)
-                collect (progn
-                          (when verbose
-                            (verbose "Processing ~a" (name project)))
-                          (make-release project :dist dist :release release :update update :verbose verbose))))))
+                collect (make-release project :dist dist :release release :update update :verbose verbose)))))
 
 (defmethod print-object ((release release) stream)
   (print-unreadable-object (release stream :type T)
@@ -301,7 +283,7 @@
   release)
 
 (defmethod ensure-project-release ((project project) (release release))
-  (make-release project :release release))
+  (make-release project :dist (dist release) :release release))
 
 (defmethod ensure-project-release ((spec cons) (release release))
   (destructuring-bind (project &key source-files systems) spec
@@ -328,25 +310,26 @@
   (make-pathname :name "systems" :type "txt" :directory `(:relative ,(version release))))
 
 (defclass project-release ()
-  ((project :initarg :project :initform (arg! :project) :accessor project)
+  ((dist :initarg :dist :initform (arg! :dist) :accessor dist)
+   (project :initarg :project :initform (arg! :project) :accessor project)
    (release :initarg :release :initform (arg! :release) :accessor release)
    (systems :initarg :systems :accessor systems)
    (source-files :initarg :source-files :accessor source-files)))
 
-(defmethod initialize-instance :after ((release project-release) &key dist)
+(defmethod initialize-instance :after ((release project-release) &key)
   (unless (slot-boundp release 'source-files)
     (setf (source-files release) (gather-sources (source-directory (project release))
                                                  (append (excluded-paths (project release))
-                                                         (excluded-paths dist)
+                                                         (excluded-paths (dist release))
                                                          *excluded-paths*))))
   (unless (slot-boundp release 'systems)
     (setf (systems release)
           (loop for asd in (loop for file in (source-files release)
                                  when (string= "asd" (pathname-type file))
                                  collect file)
-                append (loop for (name file deps) in (find-file-systems asd)
+                append (loop for (name . deps) in (find-file-systems asd)
                              unless (find name (excluded-systems (project release)) :test #'string-equal)
-                             collect (make-instance 'system :project release :name name :file file :dependencies deps))))))
+                             collect (make-instance 'system :project release :name name :file asd :dependencies deps))))))
 
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
@@ -368,7 +351,7 @@
   (make-pathname :name (name release) :type "tgz" :directory `(:relative ,(version (release release)))))
 
 (defmethod prefix ((release project-release))
-  (format NIL "~a ~a" (name release) (version release)))
+  (format NIL "~a-~a" (name release) (version release)))
 
 (defclass system ()
   ((project :initarg :project :initform (arg! :project) :accessor project)

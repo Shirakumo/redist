@@ -10,7 +10,8 @@
   (archive:with-open-archive (archive output
                               :direction :output
                               :if-exists if-exists)
-    (let ((*default-pathname-defaults* base))
+    (let* ((base (truename base))
+           (*default-pathname-defaults* base))
       (dolist (file files)
         (with-simple-restart (continue "Ignore the failing file.")
           (let ((entry (archive:create-entry-from-pathname archive (pathname-utils:enough-pathname file base))))
@@ -51,6 +52,24 @@
                  :type "dat"
                  :defaults (uiop:temporary-directory)))
 
+(defun file-match-p (file pattern)
+  (let ((file (uiop:unix-namestring file))
+        (string (uiop:unix-namestring pattern)))
+    (if (pathname-utils:absolute-p pattern)
+        (starts-with string file :start1 1)
+        (loop for i = -1 then (position #\/ file :start i)
+              while i
+              thereis (progn (incf i) (starts-with string file :start2 i))))))
+
+(defun gather-sources (base &optional exclude)
+  (let ((base (truename base)))
+    (loop for file in (directory (merge-pathnames (make-pathname :name :wild :type :wild :directory '(:relative :wild-inferiors)) base))
+          for relative = (pathname-utils:enough-pathname file base)
+          unless (or (pathname-utils:directory-p file)
+                     (loop for excluded in exclude
+                           thereis (file-match-p relative excluded)))
+          collect file)))
+
 (defun ensure-instance (instance type &rest initargs)
   (cond ((null instance)
          (apply #'make-instance type initargs))
@@ -74,6 +93,10 @@
 (defun ends-with (end string)
   (and (<= (length end) (length string))
        (string= end string :start2 (- (length string) (length end)))))
+
+(defun starts-with (start string &key (start1 0) (start2 0))
+  (and (<= (- (length start) start1) (- (length string) start2))
+       (string= start string :start1 start1 :start2 start2 :end2 (+ start2 (- (length start) start1)))))
 
 (defun url-encode (thing &key (stream NIL) (external-format :utf-8) (allowed "-._~"))
   (flet ((%url-encode (stream)

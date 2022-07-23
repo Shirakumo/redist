@@ -7,13 +7,13 @@
 (in-package #:org.shirakumo.dist)
 
 (defun write-dist-index (release stream)
-  (format stream "name: ~a
+  (format stream "name: ~(~a~)
 version: ~a
 distinfo-subscription-url: ~a
 release-index-url: ~a
 system-index-url: ~a"
           (name (dist release)) (version release)
-          (url release)
+          (url (dist release))
           (releases-url release)
           (systems-url release)))
 
@@ -22,7 +22,8 @@ system-index-url: ~a"
   (dolist (project (projects release))
     (let ((file (merge-pathnames (path project) output)))
       (format stream "~a ~a ~a ~a ~a ~a~{ ~a~}~%"
-              (name project) (url project)
+              (name project)
+              (url project)
               (file-size file)
               (digest file :md5)
               (digest (source-files project) :sha1)
@@ -42,10 +43,13 @@ system-index-url: ~a"
 (defmethod compile ((name symbol) &rest args &key &allow-other-keys)
   (apply #'compile (dist name) args))
 
-(defmethod compile ((dist dist) &rest args &key (version (next-version dist)) update verbose &allow-other-keys)
+(defmethod compile ((dist dist) &rest args &key (version (next-version dist)) update verbose (projects NIL projects-p) &allow-other-keys)
   (remf args :update)
   (remf args :version)
-  (let ((release (make-release dist :update update :version version :verbose verbose)))
+  (remf args :projects)
+  (let ((release (if projects-p
+                     (make-release dist :update update :version version :verbose verbose :projects projects)
+                     (make-release dist :update update :version version :verbose verbose))))
     (unwind-protect
          (multiple-value-prog1 (apply #'compile release args)
            (setf release NIL))
@@ -60,15 +64,15 @@ system-index-url: ~a"
     (compile project :output output :if-exists if-exists :verbose verbose))
   (flet ((f (&rest format)
            (merge-pathnames (apply #'format NIL format) output)))
-    (with-open-file (stream (f "~a.txt" (name release))
+    (with-open-file (stream (f "~(~a~).txt" (name (dist release)))
                             :direction :output
                             :if-exists if-exists)
       (write-dist-index release stream))
-    (with-open-file (stream (f (releases-path release))
+    (with-open-file (stream (f "~a" (releases-path release))
                             :direction :output
                             :if-exists if-exists)
       (write-release-index release output stream))
-    (with-open-file (stream (f (systems-path release))
+    (with-open-file (stream (f "~a" (systems-path release))
                             :direction :output
                             :if-exists if-exists)
       (write-system-index release stream))))
