@@ -134,10 +134,8 @@
 (defclass github (git)
   ((track :initarg :track :initform (arg! :track) :accessor track)))
 
-(defmethod serialize :around ((manager github))
-  (list (type-of manager)
-        :url (url manager)
-        :track (track manager)))
+(defmethod serialize append ((manager github))
+  (list :track (track manager)))
 
 (defmethod path ((manager github))
   (subseq (url manager)
@@ -154,11 +152,9 @@
   ((track :initarg :track :initform (arg! :track) :accessor track)
    (token :initarg :token :initform NIL :accessor token)))
 
-(defmethod serialize :around ((manager gitlab))
+(defmethod serialize append ((manager gitlab))
   (prune-plist
-   (list (type-of manager)
-         :url (url manager)
-         :track (track manager)
+   (list :track (track manager)
          :token (token manager))))
 
 (defmethod path ((manager gitlab))

@@ -52,7 +52,7 @@
         :dependencies (dependencies system)))
 
 (defmethod serialize append ((manager source-manager))
-  (list (type-of manager) :url (url manager)))
+  (list (type-of manager) (url manager)))
 
 (defun persist (&key (dist T) (file #p "~/dist/") (if-exists :supersede))
   (cond ((eql T dist)
@@ -65,6 +65,8 @@
              (let ((*package* #.*package*)
                    (*print-case* :downcase)
                    (*print-right-margin* 80))
+               (pprint '(in-package #.(package-name *package*)) stream)
+               (terpri stream)
                (pprint (serialize dist) stream)
                (terpri stream)))))))
 
@@ -80,13 +82,16 @@
                     until (eq form #1#)
                     do (eval form))))))))
 
-(defmacro define-dist (name (&key (type 'timestamp-versioned-dist) (url "https://localhost/")) &body body)
+(defmacro define-dist (name initargs &body body)
   (let ((projects (loop for thing in body
                         unless (eql :release (car thing))
                         collect thing))
         (releases (loop for thing in body
                         when (eql :release (car thing))
-                        collect (rest thing))))
+                        collect (rest thing)))
+        (type (getf initargs :type)))
+    (remf initargs :type)
     `(let ((existing (or (dist ',name)
-                         (setf (dist ',name) (make-instance ',type :name ',name :url ,url)))))
+                         (setf (dist ',name) (make-instance ',type :name ',name ,@(loop for (k v) on initargs by #'cddr
+                                                                                        collect k collect `',v))))))
        (ensure-instance existing ',type :projects ',projects :releases ',releases))))

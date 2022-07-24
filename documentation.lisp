@@ -494,7 +494,7 @@ The body forms should be structured as follows:
 
   BODY            ::= PROJECT | RELEASE
   PROJECT         ::= (name (SOURCE) . initargs)
-  SOURCE          ::= (type . initargs)
+  SOURCE          ::= (type url . initargs)
   RELEASE         ::= (:RELEASE version :PROJECTS (PROJECT-RELEASE*))
   PROJECT-RELEASE ::= (project-name :systems (SYSTEM*) . initargs)
   SYSTEM          ::= (name . initargs)
