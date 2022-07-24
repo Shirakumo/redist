@@ -22,6 +22,7 @@
                (:file "sources")
                (:file "ql-support")
                (:file "compile")
+               (:file "test")
                (:file "documentation"))
   :depends-on (:ironclad
                :shasht
