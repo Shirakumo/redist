@@ -60,6 +60,8 @@
                                            "--eval" (form-string `(asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration (:tree ,(namestring source-directory)))))
                                            "--eval" (form-string `(asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(namestring cache-directory) :implementation)))))
                                            "--eval" (form-string `(asdf:load-system ',(name system)))
+                                           "--eval" (form-string `(setf cl-user::*exit-on-test-failures* T)) ; Not standardised.
+                                           ;; FIXME: How do we determine test alias systems from regulars? We don't want to test the same thing twice.
                                            "--eval" (if run-tests (form-string `(asdf:test-system ',(name system))) "()")
                                            "--quit")
                                      :output target :error target))
