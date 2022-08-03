@@ -6,16 +6,29 @@
 
 (in-package #:org.shirakumo.dist)
 
+(defvar *default-output-directory* #p "~/dist/releases/")
+
 (defun write-dist-index (release stream)
   (format stream "name: ~(~a~)
 version: ~a
-distinfo-subscription-url: ~a
+system-index-url: ~a
 release-index-url: ~a
-system-index-url: ~a"
-          (name (dist release)) (version release)
-          (url (dist release))
+archive-base-url: ~a
+canonical-distinfo-url: ~a
+distinfo-subscription-url: ~a
+available-versions-url: ~a"
+          (name (dist release))
+          (version release)
+          (systems-url release)
           (releases-url release)
-          (systems-url release)))
+          (url (dist release))
+          (dist-url release)
+          (dist-url (dist release))
+          (releases-url (dist release))))
+
+(defun write-dist-releases-index (dist stream)
+  (dolist (release (releases dist))
+    (format stream "~a ~a~%" (version release) (dist-url release))))
 
 (defun write-release-index (release output stream)
   (format stream "# project url size file-md5 content-sha1 prefix [system-file1...system-fileN]~%")
@@ -43,7 +56,7 @@ system-index-url: ~a"
 (defmethod compile ((name symbol) &rest args &key &allow-other-keys)
   (apply #'compile (dist name) args))
 
-(defmethod compile ((dist dist) &rest args &key (version (next-version dist)) update verbose (projects NIL projects-p) &allow-other-keys)
+(defmethod compile ((dist dist) &rest args &key (version (next-version dist)) update verbose (projects NIL projects-p) (output *default-output-directory*) (if-exists :supersede) &allow-other-keys)
   (remf args :update)
   (remf args :version)
   (remf args :projects)
@@ -55,24 +68,34 @@ system-index-url: ~a"
            (setf release NIL))
       ;; We did not return successfully, so remove the release again.
       (when release
-        (setf (releases dist) (remove release (releases dist)))))))
+        (setf (releases dist) (remove release (releases dist)))))
+    (flet ((f (path)
+             (ensure-directories-exist (merge-pathnames path output))))
+      (with-open-file (stream (f (dist-path dist))
+                              :direction :output
+                              :if-exists if-exists)
+        (write-dist-index release stream))
+      (with-open-file (stream (f (releases-path dist))
+                              :direction :output
+                              :if-exists if-exists)
+        (write-dist-releases-index release stream)))))
 
-(defmethod compile ((release release) &key (output #p "~/dist/releases/") (if-exists :supersede) verbose)
+(defmethod compile ((release release) &key (output *default-output-directory*) (if-exists :supersede) verbose)
   (ensure-directories-exist output)
   ;; Assemble files
   (dolist (project (projects release))
     (compile project :output output :if-exists if-exists :verbose verbose))
-  (flet ((f (&rest format)
-           (ensure-directories-exist (merge-pathnames (apply #'format NIL format) output))))
-    (with-open-file (stream (f "~(~a~).txt" (name (dist release)))
+  (flet ((f (path)
+           (ensure-directories-exist (merge-pathnames path output))))
+    (with-open-file (stream (f (dist-path release))
                             :direction :output
                             :if-exists if-exists)
       (write-dist-index release stream))
-    (with-open-file (stream (f "~a" (releases-path release))
+    (with-open-file (stream (f (releases-path release))
                             :direction :output
                             :if-exists if-exists)
       (write-release-index release output stream))
-    (with-open-file (stream (f "~a" (systems-path release))
+    (with-open-file (stream (f (systems-path release))
                             :direction :output
                             :if-exists if-exists)
       (write-system-index release stream))))

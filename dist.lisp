@@ -130,6 +130,18 @@
                                              (apply #'make-instance type :url url args)))
                   args))))
 
+(defmethod releases-url ((dist dist))
+  (format NIL "~a/~a" (url dist) (namestring (releases-path dist))))
+
+(defmethod dist-url ((dist dist))
+  (format NIL "~a/~a" (url dist) (namestring (dist-path dist))))
+
+(defmethod releases-path ((dist dist))
+  (make-pathname :name (format NIL "~(~a~)-versions" (name dist)) :type "txt"))
+
+(defmethod dist-path ((release release))
+  (make-pathname :name (string-downcase (name (dist release))) :type "txt"))
+
 (defclass integer-versioned-dist (dist)
   ())
 
@@ -339,11 +351,17 @@
 (defmethod systems-url ((release release))
   (format NIL "~a/~a" (url (dist release)) (namestring (systems-path release))))
 
+(defmethod dist-url ((release release))
+  (format NIL "~a/~a" (url (dist release)) (namestring (dist-path release))))
+
 (defmethod releases-path ((release release))
   (make-pathname :name "releases" :type "txt" :directory `(:relative ,(version release))))
 
 (defmethod systems-path ((release release))
   (make-pathname :name "systems" :type "txt" :directory `(:relative ,(version release))))
+
+(defmethod dist-path ((release release))
+  (make-pathname :name (string-downcase (name (dist release))) :type "txt" :directory `(:relative ,(version release))))
 
 (defmethod version< ((a release) (b release))
   (version< (version a) (version b)))
