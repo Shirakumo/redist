@@ -139,8 +139,8 @@
 (defmethod releases-path ((dist dist))
   (make-pathname :name (format NIL "~(~a~)-versions" (name dist)) :type "txt"))
 
-(defmethod dist-path ((release release))
-  (make-pathname :name (string-downcase (name (dist release))) :type "txt"))
+(defmethod dist-path ((dist dist))
+  (make-pathname :name (string-downcase (name dist)) :type "txt"))
 
 (defclass integer-versioned-dist (dist)
   ())

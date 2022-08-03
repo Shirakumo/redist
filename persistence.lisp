@@ -4,7 +4,7 @@
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(in-package #:org.qshirakumo.redist)
+(in-package #:org.shirakumo.redist)
 
 (defvar *dists* (make-hash-table :test 'eql))
 
