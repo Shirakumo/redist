@@ -1,18 +1,18 @@
 #|
- This file is a part of Shirakumo-Dist
+ This file is a part of Redist
  (c) 2021 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(asdf:defsystem shirakumo-dist
-  :version "2.0.0"
+(asdf:defsystem redist
+  :version "1.0.0"
   :license "zlib"
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
-  :description "A simple system to set up quicklisp dists from git repos."
-  :homepage "https://Shirakumo.github.io/dist/"
-  :bug-tracker "https://github.com/Shirakumo/dist/issues"
-  :source-control (:git "https://github.com/Shirakumo/dist.git")
+  :description "An extensive system to manage and create quicklisp distributions."
+  :homepage "https://Shirakumo.github.io/redist/"
+  :bug-tracker "https://github.com/Shirakumo/redist/issues"
+  :source-control (:git "https://github.com/Shirakumo/redist.git")
   :serial T
   :components ((:file "package")
                (:file "toolkit")

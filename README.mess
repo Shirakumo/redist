@@ -1,4 +1,4 @@
-# About Shirakumo-Dist
+# About Redist
 This is a system implementing facilities to produce Quicklisp distributions. Specifically, it implements the following:
 
 1. Scanning of ASD files to discover system definitions and dependencies, //without// having to load the ASD or any systems in question.

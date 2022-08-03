@@ -1,10 +1,10 @@
 #|
- This file is a part of Shirakumo-Dist
+ This file is a part of Redist
  (c) 2021 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(defpackage #:org.shirakumo.dist
+(defpackage #:org.shirakumo.redist
   (:shadow #:compile)
   (:use #:cl)
   ;; toolkit.lisp

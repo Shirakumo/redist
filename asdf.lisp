@@ -1,10 +1,10 @@
 #|
- This file is a part of Shirakumo-Dist
+ This file is a part of Redist
  (c) 2021 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
  Author: Nicolas Hafner <shinmera@tymoon.eu>
 |#
 
-(in-package #:org.shirakumo.dist)
+(in-package #:org.shirakumo.redist)
 
 (defmethod eclector.reader:interpret-symbol ((client (eql 'reader)) in package symbol intern)
   (handler-case (call-next-method)
