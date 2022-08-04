@@ -190,7 +190,8 @@
    (active-p :initarg :active-p :initform T :accessor active-p)
    (excluded-systems :initarg :excluded-systems :initform () :accessor excluded-systems)
    (excluded-paths :initarg :excluded-paths :initform () :accessor excluded-paths)
-   (releases :initarg :releases :initform () :accessor releases)))
+   (releases :initarg :releases :initform () :accessor releases)
+   (version-cache :initform NIL :accessor version-cache)))
 
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p))
   (when releases-p (setf (releases dist) releases))
@@ -267,6 +268,7 @@
 
 (defmethod update ((project project) &rest args &key &allow-other-keys)
   (simple-inferiors:with-chdir ((source-directory project))
+    (setf (version-cache project) NIL)
     (loop for source in (sources project)
           do (restart-case (return (apply #'update source args))
                (continue ()
@@ -276,6 +278,7 @@
 
 (defmethod clone ((project project) &rest args &key &allow-other-keys)
   (simple-inferiors:with-chdir ((source-directory project))
+    (setf (version-cache project) NIL)
     (ensure-directories-exist (source-directory project))
     (loop for source in (sources project)
           do (restart-case (return (apply #'clone source args))
@@ -284,9 +287,11 @@
           finally (error "No capable source to clone~%  ~a" project))))
 
 (defmethod version ((project project))
-  (simple-inferiors:with-chdir ((source-directory project))
-    (loop for source in (sources project)
-          thereis (ignore-errors (version source)))))
+  (or (version-cache project)
+      (setf (version-cache project)
+            (simple-inferiors:with-chdir ((source-directory project))
+              (loop for source in (sources project)
+                    thereis (ignore-errors (version source)))))))
 
 (defclass release ()
   ((dist :initarg :dist :initform (arg! :dist) :accessor dist)
