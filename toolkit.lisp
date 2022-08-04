@@ -40,8 +40,9 @@
   (let ((digest (ironclad:make-digest digest)))
     (dolist (file (enlist file/s) (ironclad:byte-array-to-hex-string
                                    (ironclad:produce-digest digest)))
-      (with-open-file (stream file :element-type '(unsigned-byte 8))
-        (ironclad:update-digest digest stream)))))
+      (with-open-file (stream file :element-type '(unsigned-byte 8) :if-does-not-exist NIL)
+        (when stream
+          (ironclad:update-digest digest stream))))))
 
 (defun file-size (file)
   (with-open-file (stream file :element-type '(unsigned-byte 8))
