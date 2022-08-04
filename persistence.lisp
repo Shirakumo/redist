@@ -90,7 +90,7 @@
         (releases (loop for thing in body
                         when (eql :release (car thing))
                         collect (rest thing)))
-        (type (getf initargs :type)))
+        (type (getf initargs :type 'timestamp-versioned-dist)))
     (remf initargs :type)
     `(let ((existing (or (dist ',name)
                          (setf (dist ',name) (make-instance ',type :name ',name ,@(loop for (k v) on initargs by #'cddr
