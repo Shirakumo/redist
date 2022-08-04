@@ -157,6 +157,14 @@
   (multiple-value-bind (s m h dd mm yy) (decode-universal-time (get-universal-time) 0)
     (format NIL "~4,'0d.~2,'0d.~2,'0d-~2,'0d:~2,'0d:~2,'0d" yy mm dd h m s)))
 
+(defclass date-versioned-dist (dist)
+  ())
+
+(defmethod next-version ((dist date-versioned-dist))
+  (multiple-value-bind (s m h dd mm yy) (decode-universal-time (get-universal-time) 0)
+    (declare (ignore s m h))
+    (format NIL "~4,'0d.~2,'0d.~2,'0d" yy mm dd)))
+
 (defclass source-manager ()
   ((url :initarg :url :initform (arg! :url) :accessor url)))
 

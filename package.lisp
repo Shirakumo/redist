@@ -30,6 +30,7 @@
    #:excluded-paths
    #:integer-versioned-dist
    #:timestamp-versioned-dist
+   #:date-versioned-dist
    #:source-manager
    #:url
    #:version
