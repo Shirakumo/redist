@@ -62,29 +62,34 @@ available-versions-url: ~a"
   (remf args :projects)
   (let ((release (if projects-p
                      (make-release dist :update update :version version :verbose verbose :projects projects)
-                     (make-release dist :update update :version version :verbose verbose))))
+                     (make-release dist :update update :version version :verbose verbose)))
+        (success NIL))
     (unwind-protect
          (multiple-value-prog1 (apply #'compile release args)
-           (setf release NIL))
+           (flet ((f (path)
+                    (ensure-directories-exist (merge-pathnames path output))))
+             (with-open-file (stream (f (dist-path dist))
+                                     :direction :output
+                                     :if-exists if-exists)
+               (write-dist-index release stream))
+             (with-open-file (stream (f (releases-path dist))
+                                     :direction :output
+                                     :if-exists if-exists)
+               (write-dist-releases-index release stream)))
+           (setf success T))
       ;; We did not return successfully, so remove the release again.
-      (when release
-        (setf (releases dist) (remove release (releases dist)))))
-    (flet ((f (path)
-             (ensure-directories-exist (merge-pathnames path output))))
-      (with-open-file (stream (f (dist-path dist))
-                              :direction :output
-                              :if-exists if-exists)
-        (write-dist-index release stream))
-      (with-open-file (stream (f (releases-path dist))
-                              :direction :output
-                              :if-exists if-exists)
-        (write-dist-releases-index release stream)))))
+      (unless success
+        ;; FIXME: add delete command to remove files as well.
+        ;;        need to be careful to not remove files from shared releases
+        (setf (releases dist) (remove release (releases dist)))))))
 
 (defmethod compile ((release release) &key (output *default-output-directory*) (if-exists :supersede) verbose)
   (ensure-directories-exist output)
-  ;; Assemble files
+  ;; Assemble files from new releases
   (dolist (project (projects release))
-    (compile project :output output :if-exists if-exists :verbose verbose))
+    (when (or (equal (version release) (version project))
+              (not (probe-file (merge-pathnames (path project) output))))
+      (compile project :output output :if-exists if-exists :verbose verbose)))
   (flet ((f (path)
            (ensure-directories-exist (merge-pathnames path output))))
     (with-open-file (stream (f (dist-path release))
@@ -100,7 +105,7 @@ available-versions-url: ~a"
                             :if-exists if-exists)
       (write-system-index release stream))))
 
-(defmethod compile ((release project-release) &key output (if-exists :supersede) verbose)
+(defmethod compile ((release project-release) &key (output *default-output-directory*) (if-exists :supersede) verbose)
   (when verbose
     (verbose "Compiling ~a" (name (project release))))
   (handler-bind ((error (lambda (e)
