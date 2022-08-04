@@ -38,6 +38,7 @@ available-versions-url: ~a"
               (name project)
               (url project)
               (file-size file)
+              ;; FIXME: Cache this in the project-release
               (digest file :md5)
               (digest (source-files project) :sha1)
               (prefix project)
@@ -75,7 +76,7 @@ available-versions-url: ~a"
              (with-open-file (stream (f (releases-path dist))
                                      :direction :output
                                      :if-exists if-exists)
-               (write-dist-releases-index release stream)))
+               (write-dist-releases-index dist stream)))
            (setf success T))
       ;; We did not return successfully, so remove the release again.
       (unless success
