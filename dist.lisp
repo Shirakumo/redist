@@ -210,7 +210,7 @@
     (format stream "~a ~:[INACTIVE~;ACTIVE~]" (name project) (active-p project))))
 
 (defmethod (setf releases) :around (releases (project project))
-  (call-next-method (sort (loop for release in releases collect (ensure-release release project)) #'version>) dist))
+  (call-next-method (sort (loop for release in releases collect (ensure-release release project)) #'version>) project))
 
 (defmethod make-release ((project project) &key release update version verbose)
   (or (find release (releases project) :key #'release)
@@ -219,15 +219,12 @@
           (verbose "Processing ~a" (name project)))
         (when (or update version)
           (update project :version version :verbose verbose))
-        (let ((version (version project))
-              (prior (loop for release in (releases dist)
-                           thereis (find-project project release))))
-          (if (or (null prior) (not (equal version (version prior))))
+        (let ((version (version project)))
+          (or (find-release version project)
               (make-instance 'project-release
                              :project project
                              :release release
-                             :version version)
-              prior)))))
+                             :version version))))))
 
 (defmethod source-files ((project project))
   (gather-sources (source-directory project) (append (excluded-paths project)
@@ -240,6 +237,9 @@
         append (loop for (name file deps) in (find-file-systems asd)
                      unless (find name (excluded-systems project) :test #'string-equal)
                      collect (make-instance 'system :project project :name name :file file :dependencies deps))))
+
+(defmethod find-release (version (project project))
+  (find version (releases project) :key #'version :test #'equal))
 
 (defmethod ensure-project ((project project) dist)
   project)
