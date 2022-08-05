@@ -6,6 +6,8 @@
 
 (in-package #:org.shirakumo.redist)
 
+(defvar *global-file-dependencies*)
+
 (defmethod eclector.reader:interpret-symbol ((client (eql 'reader)) in package symbol intern)
   (handler-case (call-next-method)
     ((or
@@ -20,11 +22,28 @@
 (defmethod eclector.reader:evaluate-expression ((client (eql 'reader)) expr)
   NIL)
 
+(defun maybe-unquote (thing)
+  (if (and (consp thing) (eql 'quote (first thing)))
+      (second thing)
+      thing))
+
 (defmethod walk ((form cons) acc)
   ;; We do some simple walking here. If you do anything more crazy than that, good luck.
   (case (first form)
     ((asdf:defsystem)
-     (push (cons (second form) (find-defsystem-dependencies form)) (cdr acc)))
+     (push (cons (second form) (append *global-file-dependencies* (find-defsystem-dependencies form))) (cdr acc)))
+    ((asdf:load-system)
+     (push (maybe-unquote (second form)) *global-file-dependencies*))
+    ((asdf:load-systems)
+     (dolist (system (rest form))
+       (push (maybe-unquote system) *global-file-dependencies*)))
+    ((asdf:load-systems*)
+     (dolist (system (second form))
+       (push (maybe-unquote system) *global-file-dependencies*)))
+    ((asdf:oos)
+     (push (maybe-unquote (third form)) *global-file-dependencies*))
+    ((asdf:operate)
+     (push (maybe-unquote (third form)) *global-file-dependencies*))
     ((let)
      (dolist (bind (second form))
        (when (listp bind)
@@ -73,6 +92,7 @@
 (defun find-file-systems (file)
   (with-open-file (stream file)
     (let ((*package* (find-package :asdf/user))
+          (*global-file-dependencies* ())
           (eclector.reader:*client* 'reader)
           (acc (cons NIL NIL)))
       (loop for form = (eclector.reader:read stream NIL #1='#:eof)
