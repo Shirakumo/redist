@@ -47,7 +47,7 @@ available-versions-url: ~a"
   (format stream "# project system-file system-name [dependency1..dependencyN]~%")
   (dolist (project (projects release))
     (dolist (system (systems project))
-      (format stream "~a ~a ~a~{ ~a~}~%"
+      (format stream "~a ~a ~(~a~{ ~a~}~)~%"
               (name project) (pathname-name (file system)) (name system)
               (dependencies system)))))
 

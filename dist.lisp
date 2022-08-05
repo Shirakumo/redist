@@ -367,7 +367,7 @@
 (defclass project-release ()
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (version :initarg :version :initform (arg! :version) :accessor version)
-   (systems :initarg :systems :accessor systems)
+   (systems :accessor systems)
    (source-files :initarg :source-files :accessor source-files)
    (archive-md5 :initform NIL :initarg :archive-md5 :accessor archive-md5)
    (source-sha1 :initform NIL :initarg :source-sha1 :accessor source-sha1)))
@@ -389,9 +389,19 @@
                              collect (make-instance 'system :project release :name name :file asd :dependencies deps)))))
   (pushnew release (releases (project release))))
 
+(defmethod shared-initialize :after ((release project-release) slot &key (systems NIL systems-p))
+  (when systems-p (setf (systems release) systems)))
+
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
     (format stream "~a ~a" (name (project release)) (version release))))
+
+(defmethod (setf systems) :around ((systems cons) (release project-release))
+  (call-next-method (sort (loop for system in systems collect (ensure-system system release)) #'string< :key #'name) release))
+
+(defmethod ensure-system ((spec cons) (release project-release))
+  (destructuring-bind (name . initargs) spec
+    (apply #'make-instance 'system :project release :name name initargs)))
 
 (defmethod ensure-project-release ((project project-release) (release release))
   project)
@@ -415,12 +425,29 @@
 (defmethod version< ((a project-release) (b project-release))
   (version< (version a) (version b)))
 
+(defun implementation-specific-dependency-p (dep)
+  (find dep '(sb-aclrepl sb-bsd-sockets sb-capstone sb-cltl2 sb-concurrency
+              sb-cover sb-executable sb-gmp sb-graph sb-grovel sb-introspect
+              sb-md5 sb-mpfr sb-posix sb-queue sb-rotate-byte sb-rt
+              sb-simple-streams sb-sprof extensible-sequences osi unix
+              syscalls winhttp package-locks sbcl-single-float-tran)
+        :test #'string-equal))
+
 (defclass system ()
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (name :initarg :name :initform (arg! :name) :accessor name)
    (file :initarg :file :initform (arg! :file) :accessor file)
    (dependencies :initarg :dependencies :initform (arg! :dependencies) :accessor dependencies)))
 
+(defmethod shared-initialize :after ((system system) slots &key (dependencies NIL dependencies-p))
+  (when dependencies-p (setf (dependencies system) dependencies)))
+
+(defmethod (setf dependencies) :around ((dependencies cons) (system system))
+  (call-next-method (delete-duplicates (sort (remove-if #'implementation-specific-dependency-p dependencies) #'string<) :test #'string=) system))
+
 (defmethod print-object ((system system) stream)
   (print-unreadable-object (system stream :type T)
     (format stream "~a ~a" (name (project system)) (name system))))
+
+(defmethod ensure-system ((system system) (release project-release))
+  system)
