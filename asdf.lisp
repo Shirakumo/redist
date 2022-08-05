@@ -31,7 +31,9 @@
   ;; We do some simple walking here. If you do anything more crazy than that, good luck.
   (case (first form)
     ((asdf:defsystem)
-     (push (cons (second form) (append *global-file-dependencies* (find-defsystem-dependencies form))) (cdr acc)))
+     ;; SIGH. Ignore these stupid fuckin' systems.
+     (unless (search "TMPL_VAR" (string (second form)))
+       (push (cons (second form) (append *global-file-dependencies* (find-defsystem-dependencies form))) (cdr acc))))
     ((asdf:load-system)
      (push (maybe-unquote (second form)) *global-file-dependencies*))
     ((asdf:load-systems)
