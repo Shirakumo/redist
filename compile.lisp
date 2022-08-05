@@ -38,9 +38,8 @@ available-versions-url: ~a"
               (name project)
               (url project)
               (file-size file)
-              ;; FIXME: Cache this in the project-release
-              (digest file :md5)
-              (digest (source-files project) :sha1)
+              (archive-md5 project)
+              (source-sha1 project)
               (prefix project)
               (remove-duplicates (loop for system in (systems project) collect (file-namestring (file system))) :test #'string=)))))
 
@@ -113,5 +112,6 @@ available-versions-url: ~a"
                           (when verbose
                             (verbose "~a" e))
                           (continue e))))
-    (tgz (source-files release) (ensure-directories-exist (merge-pathnames (path release) output))
-         :base (source-directory (project release)) :if-exists if-exists)))
+    (prog1 (tgz (source-files release) (ensure-directories-exist (merge-pathnames (path release) output))
+                :base (source-directory (project release)) :if-exists if-exists)
+      (setf (archive-md5 release) (digest (merge-pathnames (path release) output) :md5)))))

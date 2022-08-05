@@ -45,6 +45,8 @@
         :release (version (release release))
         :version (version release)
         :source-files (source-files release)
+        :source-sha1 (source-sha1 release)
+        :archive-md5 (archive-md5 release)
         :systems (mapcar #'serialize (systems release))))
 
 (defmethod serialize append ((system system))
