@@ -16,6 +16,7 @@
    #:find-all-systems)
   ;; dist.lisp
   (:export
+   #:*default-source-directory*
    #:*excluded-paths*
    #:make-release
    #:find-project
@@ -40,9 +41,10 @@
    #:name
    #:source-directory
    #:sources
-   #:active-p
+   #:disabled-p
    #:excluded-systems
    #:excluded-paths
+   #:releases
    #:remove-project
    #:add-project
    #:release
@@ -51,15 +53,17 @@
    #:projects
    #:releases-url
    #:systems-url
+   #:dist-url
    #:releases-path
    #:systems-path
+   #:dist-path
    #:project-release
-   #:dist
    #:project
-   #:release
    #:version
    #:systems
    #:source-files
+   #:archive-md5
+   #:source-sha1
    #:path
    #:prefix
    #:system
@@ -70,9 +74,11 @@
   ;; persistence.lisp
   (:export
    #:dist
+   #:project
    #:serialize
    #:persist
    #:restore
+   #:define-project
    #:define-dist)
   ;; sources.lisp
   (:export

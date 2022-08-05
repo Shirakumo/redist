@@ -238,7 +238,7 @@
   project)
 
 (defmethod remove-project ((project project) (dist dist))
-  (setf (disabled-p project) T))
+  (setf (projects dist) (remove project (projects dist))))
 
 (defmethod remove-project (project (dist dist))
   (remove-project (find-project project dist) dist))

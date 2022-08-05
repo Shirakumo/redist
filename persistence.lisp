@@ -12,7 +12,7 @@
 (defmethod dist ((name symbol))
   (gethash name *dists*))
 
-(defmethod (setf dist) (value (name symbol))
+(defmethod (setf dist) ((dist dist) (name symbol))
   (setf (gethash name *dists*) value))
 
 (defmethod project ((name string))
@@ -20,6 +20,28 @@
 
 (defmethod (setf project) ((project project) (name string))
   (setf (gethash name *projects*) project))
+
+(defmacro define-project (name sources &body body)
+  (form-fiddle:with-body-options (releases initargs) body
+    (let ((name (string-downcase name)))
+      `(let ((project (setf (project ,name)
+                            (ensure-instance (project ',name) 'project :name ,name :sources ',sources
+                                             ,@(loop for (k v) on initargs by #'cddr
+                                                     collect k collect `',v)))))
+         ,@(loop for release in releases
+                 collect `(ensure-release ',release project))
+         project))))
+
+(defmacro define-dist (name projects &body body)
+  (form-fiddle:with-body-options (releases initargs) body
+    (let ((type (getf initargs :type 'timestamp-versioned-dist)))
+      (remf initargs :type)
+      `(let ((dist (setf (dist ',name)
+                         (ensure-instance (dist ',name) ',type
+                                          :name ',name ,@(loop for (k v) on initargs by #'cddr
+                                                               collect k collect `',v)
+                                          :projects ',projects :releases ',releases))))
+         dist))))
 
 (defgeneric serialize (thing)
   (:method-combination append :most-specific-last))
@@ -90,25 +112,3 @@
   (with-standard-io-syntax
     (let ((*package* #.*package*))
       (load file :if-does-not-exist if-does-not-exist))))
-
-(defmacro define-project (name sources &body body)
-  (form-fiddle:with-body-options (releases initargs) body
-    (let ((name (string-downcase name)))
-      `(let ((project (setf (project ,name)
-                            (ensure-instance (project ',name) 'project :name ,name :sources ',sources
-                                             ,@(loop for (k v) on initargs by #'cddr
-                                                     collect k collect `',v)))))
-         ,@(loop for release in releases
-                 collect `(ensure-release ',release project))
-         project))))
-
-(defmacro define-dist (name projects &body body)
-  (form-fiddle:with-body-options (releases initargs) body
-    (let ((type (getf initargs :type 'timestamp-versioned-dist)))
-      (remf initargs :type)
-      `(let ((dist (setf (dist ',name)
-                         (ensure-instance (dist ',name) ',type
-                                          :name ',name ,@(loop for (k v) on initargs by #'cddr
-                                                               collect k collect `',v)
-                                          :projects ',projects :releases ',releases))))
-         dist))))
