@@ -46,4 +46,6 @@ Once a dist release has been produced, you should ``persist`` the changes, to en
 
 Should you want to add or remove projects from a dist later, you can simply redefine your dist, or use the functions ``add-project`` and ``remove-project``, if you prefer. You can also maintain multiple dists with different sets of projects and different release schedules. The dists will share the archives whenever project versions coincide.
 
+In order to update the project sources, you can either individually ``update`` a project, or pass ``:update T`` to ``compile``. Additionally, if you'd prefer some extra output, since creating a release can take a while, you can also pass ``:verbose T``.
+
 If you would like to produce a dist from the official "quicklisp-projects"(https://github.com/quicklisp/quicklisp-projects), simply clone that repository and load its data in via ``parse-quicklisp-projects``. Be careful though, cloning all the repositories takes quite a while, and a few of the links have since broken.
