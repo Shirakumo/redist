@@ -32,6 +32,11 @@ See FIND-FILE-SYSTEMS"))
 
 ;;; dist.lisp
 (docs:define-docs
+  (variable *default-source-directory*
+    "The default directory under which source repositories are stored.
+
+See PROJECT")
+  
   (variable *excluded-paths*
     "A list of path patterns to exclude globally.
 
@@ -155,7 +160,7 @@ See ADD-PROJECT
 See REMOVE-PROJECT")
   
   (function releases
-    "Accesses the set of releases present on the DIST.
+    "Accesses the set of releases present on the DIST or PROJECT.
 
 When setting this place, the set is automatically ordered such that
 the latest version comes first. Each object in the set is also coerced
@@ -169,7 +174,9 @@ Note that no two releases may have the same (under EQUAL) version.
 
 See MAKE-RELEASE
 See RELEASE (type)
-See DIST (type)")
+See PROJECT-RELEASE (type)
+See DIST (type)
+See PROJECT (type)")
   
   (function excluded-paths
     "Accesses the set of path exclusion pattern.
@@ -282,7 +289,8 @@ deactivated instead.
 See NAME
 See SOURCE-DIRECTORY
 See SOURCES
-See ACTIVE-P
+See RELEASES
+See DISABLED-P
 See EXCLUDED-SYSTEMS
 See EXCLUDED-PATHS
 See MAKE-RELEASE
@@ -308,10 +316,10 @@ instated in case links go stale or the network breaks down.
 See PROJECT (type)
 See SOURCE-MANAGER (type)")
   
-  (function active-p
+  (function disabled-p
     "Accesses whether the project is considered active or not.
 
-Projects that are inactive are normally excluded from updates and new
+Projects that are disabled are normally excluded from updates and new
 releases of a dist.
 
 See PROJECT (type)")
@@ -360,12 +368,17 @@ See PROJECTS
 See FIND-PROJECT
 See RELEASES-URL
 See SYSTEMS-URL
+See DIST-URL
 See RELEASES-PATH
 See SYSTEMS-PATH
+See DIST-PATH
 See COMPILE")
   
   (function dist
     "Accesses the dist under which this object was created.
+
+If passed a symbol, the dist with the given name is retrieved (if
+any).
 
 See DIST (type)
 See RELEASE (type)
@@ -380,6 +393,11 @@ See RELEASE (type)")
     "Returns the URL at which the systems.txt file can be found for the release.
 
 See RELEASE (type)")
+
+  (function dist-url
+    "Returns the URL at which the dist.txt file can be found for the release.
+
+See RELEASE (type)")
   
   (function releases-path
     "Returns the local path at which the releases.txt file can be found for the release.
@@ -390,25 +408,32 @@ See RELEASE (type)")
     "Returns the local path at which the systems.txt file can be found for the release.
 
 See RELEASE (type)")
+
+  (function dist-path
+    "Returns the local path at which the dist.txt file can be found for the release.
+
+See RELEASE (type)")
   
   (type project-release
-    "Represents a particular version snapshot of a project within a dist's release.
+    "Represents a particular version snapshot of a project.
 
 See PROJECT (type)
-See RELEASE (type)
-See DIST
 See PROJECT
-See RELEASE
 See VERSION
 See SYSTEMS
 See SOURCE-FILES
 See NAME
 See URL
+See ARCHIVE-MD5
+See SOURCE-SHA1
 See PATH
 See PREFIX")
   
   (function project
     "Accesses the project the release is spawned from.
+
+If passed a symbol or string, the project with the given name is
+retrieved (if any).
 
 See PROJECT (type)
 See PROJECT-RELEASE (type)")
@@ -429,6 +454,16 @@ See PROJECT-RELEASE (type)")
     "Accesses the set of source files that are part of the release.
 
 These are pathnames indexing into the project's source-directory.
+
+See PROJECT-RELEASE (type)")
+
+  (function archive-md5
+    "Accesses the MD5 hash of the project release's archive.
+
+See PROJECT-RELEASE (type)")
+
+  (function source-sha1
+    "Accesses the SHA1 hash of the project release's source files.
 
 See PROJECT-RELEASE (type)")
   
@@ -486,23 +521,42 @@ See RESTORE")
 Note that this will *update* existing dists, not replace their data.
 
 See PERSIST")
+
+  (function define-project
+    "Macro to define a project.
+
+The SOURCES should be a list of source-manager descriptions:
+
+  SOURCE-MANAGER ::= (type url initargs*)
+
+The BODY can be a set of initargs for the project, followed by release
+descriptions:
+
+  RELEASE ::= (version :systems (SYSTEM*) initargs*)
+  SYSTEM  ::= (name initargs*)
+
+If a project of the same name already exists, it is updated.
+Note that the name is treated as a case-insensitive string.
+
+See PROJECT (type)
+See SOURCE-MANAGER (type)
+See PROJECT-RELEASE (type)
+See SYSTEM (type)")
   
   (function define-dist
     "Macro to define a dist.
 
-The body forms should be structured as follows:
+The PROJECTS should be a list of project names to include in the
+dist. The BODY can be a set of initargs for the dist, followed by
+release descriptions:
 
-  BODY            ::= PROJECT | RELEASE
-  PROJECT         ::= (name (SOURCE) . initargs)
-  SOURCE          ::= (type url . initargs)
-  RELEASE         ::= (:RELEASE version :PROJECTS (PROJECT-RELEASE*))
-  PROJECT-RELEASE ::= (project-name :systems (SYSTEM*) . initargs)
-  SYSTEM          ::= (name . initargs)
+  RELEASE ::= (version :projects (PROJECT*))
+  PROJECT ::= (name :version version)
 
-Essentially the forms follow the same structure as produced by
-SERIALIZE.
+If a dist of the same name already exists, it is updated.
 
-See SERIALIZE"))
+See DIST (type)
+See RELEASE (type)"))
 
 ;;; sources.lisp
 (docs:define-docs
