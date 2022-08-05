@@ -49,17 +49,14 @@
   (print-unreadable-object (dist stream :type T)
     (format stream "~s ~a" (name dist) (url dist))))
 
-(defmethod (setf releases) :around (releases (dist dist))
+(defmethod (setf releases) :around ((releases cons) (dist dist))
   (call-next-method (sort (loop for release in releases collect (ensure-release release dist)) #'version>) dist))
 
-(defmethod (setf projects) :around (projects (dist dist))
-  (let ((new (loop for project in projects collect (ensure-project project dist))))
-    ;; Ensure we can't remove projects, only disable.
-    (dolist (project (projects dist))
-      (unless (find project new)
-        (setf (active-p project) NIL)
-        (push project new)))
-    (call-next-method new dist)))
+(defmethod (setf projects) :around ((projects cons) (dist dist))
+  (call-next-method (sort (loop for project in projects collect (ensure-project project)) #'string< :key #'name) dist))
+
+(defmethod (setf projects) :around ((all (eql T)) (dist dist))
+  (setf (projects dist) (loop for project being the hash-values of *projects* collect project)))
 
 (defmethod find-release (version (dist dist))
   (find version (releases dist) :key #'version :test #'equalp))
@@ -81,7 +78,7 @@
               version dist prior)
       (setf (releases dist) (remove prior (releases dist)))))
   (let ((release (if projects-p
-                     (let ((projects (loop for project in projects collect (ensure-project project dist))))
+                     (let ((projects (loop for project in projects collect (ensure-project project))))
                        (make-instance 'release :dist dist :version version :update update :verbose verbose :projects projects))
                      (make-instance 'release :dist dist :version version :update update :verbose verbose))))
     (push release (releases dist))
@@ -93,42 +90,12 @@
 (defmethod find-project ((name string) (dist dist))
   (find name (projects dist) :key #'name :test #'equalp))
 
-(defmethod ensure-project ((pathname pathname) (dist dist))
-  (let ((name (car (last (pathname-directory pathname)))))
-    (ensure-project (make-instance 'project :name name :source-directory pathname) dist)))
+(defmethod ensure-project ((name string))
+  (or (project name)
+      (error "No project named ~s." name)))
 
-(defmethod ensure-project ((name symbol) (dist dist))
-  (or (find-project name dist)
-      (error "No project named ~s on ~a" name dist)))
-
-(defmethod ensure-project ((name string) (dist dist))
-  (or (find-project name dist)
-      (cond ((string= "" name)
-             (error "Can't use empty project names."))
-            ((char= #\/ (char name 0))
-             (ensure-project (pathname name) dist))
-            (T
-             (loop for hook in *string-type-parse-hooks*
-                   for type = (funcall hook name)
-                   do (when type (return (ensure-project (list type name) dist)))
-                   finally (error "Don't know how to turn~%  ~s~%into a project on ~a."
-                                  name dist))))))
-
-(defmethod ensure-project ((spec cons) (dist dist))
-  (destructuring-bind (name &optional sources &rest args) spec
-    (unless (listp (first sources)) (setf sources (list sources)))
-    (apply #'ensure-instance
-           (find-project name dist) 'project
-           (list* :name name
-                  :sources (loop for (type-ish url . args) in sources
-                                 for type = (etypecase type
-                                              (keyword (intern (string type-ish) #.*package*))
-                                              (symbol type-ish)
-                                              (source-manager type-ish))
-                                 collect (if (typep type 'source-manager)
-                                             type
-                                             (apply #'make-instance type :url url args)))
-                  args))))
+(defmethod ensure-project ((name symbol))
+  (ensure-project (string name)))
 
 (defmethod releases-url ((dist dist))
   (format NIL "~a/~a" (url dist) (namestring (releases-path dist))))
@@ -191,48 +158,61 @@
 (defmethod version ((manager source-manager))
   (digest (gather-sources simple-inferiors:*cwd*) :sha1))
 
+(defmethod ensure-source ((source source-manager))
+  source)
+
+(defmethod ensure-source ((spec cons))
+  (destructuring-bind (type url . initargs) spec
+    (apply #'make-instance type :url url initargs)))
+
 (defclass project ()
   ((name :initarg :name :initform (arg! :name) :accessor name)
    (source-directory :initarg :source-directory :initform (arg! :source-directory) :accessor source-directory)
    (sources :initarg :sources :initform NIL :accessor sources)
-   (active-p :initarg :active-p :initform T :accessor active-p)
+   (disabled-p :initarg :disabled-p :initform NIL :accessor disabled-p)
    (excluded-systems :initarg :excluded-systems :initform () :accessor excluded-systems)
    (excluded-paths :initarg :excluded-paths :initform () :accessor excluded-paths)
    (releases :initarg :releases :initform () :accessor releases)
    (version-cache :initform NIL :accessor version-cache)))
 
-(defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p))
-  (when releases-p (setf (releases dist) releases))
+(defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p))
+  (when releases-p (setf (releases project) releases))
+  (when sources-p (setf (sources project) sources))
   (when (and (sources project)
-             (active-p project)
+             (not (disabled-p project))
              (or (not (probe-file (source-directory project)))
                  (null (directory (merge-pathnames pathname-utils:*wild-path* (source-directory project))))))
     (restart-case
         (clone project :verbose T)
-      (deactivate ()
-        :report "Deactivate the project"
-        (setf (active-p project) NIL)))))
+      (disable ()
+        :report "Disable the project"
+        (setf (disabled-p project) T)))))
 
 (defmethod print-object ((project project) stream)
   (print-unreadable-object (project stream :type T)
-    (format stream "~a ~:[INACTIVE~;ACTIVE~]" (name project) (active-p project))))
+    (format stream "~a ~:[INACTIVE~;ACTIVE~]" (name project) (not (disabled-p project)))))
 
 (defmethod (setf releases) :around (releases (project project))
   (call-next-method (sort (loop for release in releases collect (ensure-release release project)) #'version>) project))
 
-(defmethod make-release ((project project) &key release update version verbose)
-  (or (find release (releases project) :key #'release)
-      (progn
-        (when verbose
-          (verbose "Processing ~a" (name project)))
-        (when (or update version)
-          (update project :version version :verbose verbose))
-        (let ((version (version project)))
-          (or (find-release version project)
-              (make-instance 'project-release
-                             :project project
-                             :release release
-                             :version version))))))
+(defmethod (setf sources) :around (sources (project project))
+  (call-next-method (loop for source in sources collect (ensure-source source)) project))
+
+(defmethod ensure-release ((spec cons) (project project))
+  (destructuring-bind (version . initargs) spec
+    (apply #'ensure-instance (find-release version project) 'project-release
+           :version version initargs)))
+
+(defmethod make-release ((project project) &key update version verbose)
+  (when verbose
+    (verbose "Processing ~a" (name project)))
+  (when (or update version)
+    (update project :version version :verbose verbose))
+  (let ((version (version project)))
+    (or (find-release version project)
+        (make-instance 'project-release
+                       :project project
+                       :version version))))
 
 (defmethod source-files ((project project))
   (gather-sources (source-directory project) (append (excluded-paths project)
@@ -249,11 +229,11 @@
 (defmethod find-release (version (project project))
   (find version (releases project) :key #'version :test #'equal))
 
-(defmethod ensure-project ((project project) dist)
+(defmethod ensure-project ((project project))
   project)
 
 (defmethod remove-project ((project project) (dist dist))
-  (setf (active-p project) NIL))
+  (setf (disabled-p project) T))
 
 (defmethod remove-project (project (dist dist))
   (remove-project (find-project project dist) dist))
@@ -272,17 +252,19 @@
     (add-project (make-instance 'project :name name :source-directory pathname) dist)))
 
 (defmethod add-project (thingy (dist dist))
-  (add-project (ensure-project thingy dist) dist))
+  (add-project (ensure-project thingy) dist))
 
-(defmethod update ((project project) &rest args &key &allow-other-keys)
-  (simple-inferiors:with-chdir ((source-directory project))
-    (setf (version-cache project) NIL)
-    (loop for source in (sources project)
-          do (restart-case (return (apply #'update source args))
-               (continue ()
-                 :report "Try the next source."))
-          finally (cerror "Ignore the update failure." "No capable source to update~%  ~a"
-                          project))))
+(defmethod update ((project project) &rest args &key version &allow-other-keys)
+  (when (or (null version)
+            (not (equal (version project) version)))
+    (simple-inferiors:with-chdir ((source-directory project))
+      (setf (version-cache project) NIL)
+      (loop for source in (sources project)
+            do (restart-case (return (apply #'update source args))
+                 (continue ()
+                   :report "Try the next source."))
+            finally (cerror "Ignore the update failure." "No capable source to update~%  ~a"
+                            project)))))
 
 (defmethod clone ((project project) &rest args &key &allow-other-keys)
   (simple-inferiors:with-chdir ((source-directory project))
@@ -313,8 +295,8 @@
   (unless (slot-boundp release 'projects)
     (setf (projects release)
           (loop for project in (projects dist)
-                when (active-p project)
-                collect (make-release project :release release :update update :verbose verbose)))))
+                unless (disabled-p project)
+                collect (make-release project :update update :verbose verbose)))))
 
 (defmethod print-object ((release release) stream)
   (print-unreadable-object (release stream :type T)
@@ -338,19 +320,17 @@
                        (error "No project named~%  ~s~%present on dist ~s!"
                               project (dist release))))
           (systems (getf initargs :systems))
-          (named-release (getf initargs :release)))
+          (version (getf initargs :version)))
       (remf initargs :systems)
-      (remf initargs :release)
-      (if (equal named-release (version release))
+      (remf initargs :version)
+      (if (equal version (version release))
           (ensure-instance (find-project project release)
                            'project-release
                            (list* :project project
-                                  :release release
                                   :systems (loop for (name . args) in systems
                                                  collect (apply #'make-instance 'system :project project :name name args))
                                   initargs))
-          (ensure-project-release (list* :systems systems spec)
-                                  (ensure-release named-release (dist release)))))))
+          (find-release version project)))))
 
 (defmethod find-project ((project project) (release release))
   (find project (projects release) :key #'project))
@@ -381,7 +361,6 @@
 
 (defclass project-release ()
   ((project :initarg :project :initform (arg! :project) :accessor project)
-   (release :initarg :release :initform (arg! :release) :accessor release)
    (version :initarg :version :initform (arg! :version) :accessor version)
    (systems :initarg :systems :accessor systems)
    (source-files :initarg :source-files :accessor source-files)
@@ -392,7 +371,6 @@
   (unless (slot-boundp release 'source-files)
     (setf (source-files release) (gather-sources (source-directory (project release))
                                                  (append (excluded-paths (project release))
-                                                         (excluded-paths (dist release))
                                                          *excluded-paths*))))
   (unless (source-sha1 release)
     (setf (source-sha1 release) (digest (source-files release) :sha1)))
@@ -408,7 +386,7 @@
 
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
-    (format stream "~a ~a" (name (project release)) (version (release release)))))
+    (format stream "~a ~a" (name (project release)) (version release))))
 
 (defmethod ensure-project-release ((project project-release) (release release))
   project)
@@ -416,14 +394,11 @@
 (defmethod ensure-release ((release project-release) (project project))
   release)
 
-(defmethod dist ((release project-release))
-  (dist (release release)))
-
 (defmethod name ((release project-release))
   (name (project release)))
 
 (defmethod url ((release project-release))
-  (format NIL "~a/~a" (url (dist release)) (uiop:unix-namestring (path release))))
+  (format NIL "/~a" (uiop:unix-namestring (path release))))
 
 (defmethod path ((release project-release))
   (make-pathname :name (format NIL "~a-~a" (name release) (version release))

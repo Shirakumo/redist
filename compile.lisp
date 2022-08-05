@@ -34,9 +34,9 @@ available-versions-url: ~a"
   (format stream "# project url size file-md5 content-sha1 prefix [system-file1...system-fileN]~%")
   (dolist (project (projects release))
     (let ((file (merge-pathnames (path project) output)))
-      (format stream "~a ~a ~a ~a ~a ~a~{ ~a~}~%"
+      (format stream "~a ~a~a ~a ~a ~a ~a~{ ~a~}~%"
               (name project)
-              (url project)
+              (url (dist release)) (url project)
               (file-size file)
               (archive-md5 project)
               (source-sha1 project)
@@ -87,9 +87,7 @@ available-versions-url: ~a"
   (ensure-directories-exist output)
   ;; Assemble files from new releases
   (dolist (project (projects release))
-    (when (or (equal (version release) (version project))
-              (not (probe-file (merge-pathnames (path project) output))))
-      (compile project :output output :if-exists if-exists :verbose verbose)))
+    (compile project :output output :if-exists if-exists :verbose verbose))
   (flet ((f (path)
            (ensure-directories-exist (merge-pathnames path output))))
     (with-open-file (stream (f (dist-path release))
@@ -103,15 +101,19 @@ available-versions-url: ~a"
     (with-open-file (stream (f (systems-path release))
                             :direction :output
                             :if-exists if-exists)
-      (write-system-index release stream))))
+      (write-system-index release stream))
+    release))
 
-(defmethod compile ((release project-release) &key (output *default-output-directory*) (if-exists :supersede) verbose)
-  (when verbose
-    (verbose "Compiling ~a" (name (project release))))
-  (handler-bind ((error (lambda (e)
-                          (when verbose
-                            (verbose "~a" e))
-                          (continue e))))
-    (prog1 (tgz (source-files release) (ensure-directories-exist (merge-pathnames (path release) output))
-                :base (source-directory (project release)) :if-exists if-exists)
-      (setf (archive-md5 release) (digest (merge-pathnames (path release) output) :md5)))))
+(defmethod compile ((release project-release) &key (output *default-output-directory*) (if-exists :supersede) verbose force)
+  (let ((target (merge-pathnames (path release) output)))
+    (when (or force (not (probe-file target)))
+      (when verbose
+        (verbose "Compiling ~a" (name (project release))))
+      (handler-bind ((error (lambda (e)
+                              (when verbose
+                                (verbose "~a" e))
+                              (continue e))))
+        (update (project release) :version (version release))
+        (prog1 (tgz (source-files release) (ensure-directories-exist target)
+                    :base (source-directory (project release)) :if-exists if-exists)
+          (setf (archive-md5 release) (digest (merge-pathnames (path release) output) :md5)))))))

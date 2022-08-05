@@ -17,7 +17,7 @@
                   ,@body)))
      ,result))
 
-(defun parse-quicklisp-projects (root &key (dist (dist 'quicklisp)) (source-directory #p"~/dist/sources/"))
+(defun parse-quicklisp-projects (root &key (source-directory #p"~/dist/sources/"))
   (let ((excluded-systems (make-hash-table :test #'equalp))
         (excluded-paths ()))
     (do-quicklisp-file (line (merge-pathnames "qlc-meta/excluded-systems.txt" root))
@@ -27,16 +27,14 @@
       (if (char= #\/ (char line 0))
           (push (uiop:parse-native-namestring (subseq line 1)) excluded-paths)
           (push (uiop:parse-native-namestring line) excluded-paths)))
-    (setf (excluded-paths dist) excluded-paths)
-    (setf (projects dist)
-          (loop for dir in (directory (merge-pathnames "projects/*/" root))
-                for name = (pathname-utils:directory-name dir)
-                for sources = (parse-quicklisp-source-file (merge-pathnames "source.txt" dir))
-                collect (ensure-project (list name sources
-                                              :source-directory (merge-pathnames (make-pathname :directory (list :relative name)) source-directory)
-                                              :excluded-systems (gethash name excluded-systems))
-                                        dist)))
-    dist))
+    (loop for dir in (directory (merge-pathnames "projects/*/" root))
+          for name = (pathname-utils:directory-name dir)
+          for sources = (parse-quicklisp-source-file (merge-pathnames "source.txt" dir))
+          do (setf (project name) (ensure-instance (project name) 'project
+                                                   :name name
+                                                   :sources sources
+                                                   :source-directory (merge-pathnames (make-pathname :directory (list :relative name)) source-directory)
+                                                   :excluded-systems (gethash name excluded-systems))))))
 
 (defun parse-quicklisp-source-file (file)
   (let ((managers ()))

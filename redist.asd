@@ -33,4 +33,5 @@
                :simple-inferiors
                :pathname-utils
                :uiop
+               :form-fiddle
                :documentation-utils))

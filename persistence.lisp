@@ -7,6 +7,7 @@
 (in-package #:org.shirakumo.redist)
 
 (defvar *dists* (make-hash-table :test 'eql))
+(defvar *projects* (make-hash-table :test 'equalp))
 
 (defmethod dist ((name symbol))
   (gethash name *dists*))
@@ -14,36 +15,45 @@
 (defmethod (setf dist) (value (name symbol))
   (setf (gethash name *dists*) value))
 
+(defmethod project ((name string))
+  (gethash name *projects*))
+
+(defmethod (setf project) ((project project) (name string))
+  (setf (gethash name *projects*) project))
+
 (defgeneric serialize (thing)
   (:method-combination append :most-specific-last))
+
+(defmethod serialize :around ((dist dist))
+  `(define-dist ,(name dist) ,(mapcar #'name (projects dist))
+     ,@(prune-plist (call-next-method))
+     ,@(mapcar #'serialize (releases dist))))
 
 (defmethod serialize append ((dist dist))
   (list :type (type-of dist)
         :url (url dist)
         :excluded-paths (excluded-paths dist)))
 
-(defmethod serialize :around ((dist dist))
-  `(define-dist ,(name dist) ,(call-next-method)
-     ,@(mapcar #'serialize (projects dist))
-     ,@(mapcar #'serialize (releases dist))))
+(defmethod serialize :around ((project project))
+  `(define-project ,(name project)
+       ,(mapcar #'serialize (sources project))
+     ,@(prune-plist (call-next-method))
+     ,@(mapcar #'serialize (releases project))))
 
 (defmethod serialize append ((project project))
-  (list* (name project) (mapcar #'serialize (sources project))
-         (prune-plist
-          (list :active-p (active-p project)
-                :source-directory (source-directory project)
-                :excluded-systems (excluded-systems project)
-                :excluded-paths (excluded-paths project)))))
+  (list :disabled-p (disabled-p project)
+        :source-directory (source-directory project)
+        :excluded-systems (excluded-systems project)
+        :excluded-paths (excluded-paths project)
+        :releases (mapcar #'serialize (releases project))))
 
 (defmethod serialize append ((release release))
-  (list :release (version release)
-        :projects (mapcar #'serialize (projects release))))
+  (list (version release)
+        :projects (loop for project in (projects release)
+                        collect (list (name project) :version (version project)))))
 
 (defmethod serialize append ((release project-release))
-  ;; FIXME: persisting instances that are inherited from prior releases
-  (list (name (project release))
-        :release (version (release release))
-        :version (version release)
+  (list (version release)
         :source-files (source-files release)
         :source-sha1 (source-sha1 release)
         :archive-md5 (archive-md5 release)
@@ -57,44 +67,47 @@
 (defmethod serialize append ((manager source-manager))
   (list (type-of manager) (url manager)))
 
-(defun persist (&key (dist T) (file #p "~/dist/") (if-exists :supersede))
-  (cond ((eql T dist)
-         (loop for dist being the hash-values of *dists*
-               do (persist :dist dist :file (make-pathname :name (string-downcase (name dist)) :type "distinfo" :defaults file) :if-exists if-exists)))
-        (T
-         (ensure-directories-exist file)
-         (with-open-file (stream file :direction :output :if-exists if-exists)
-           (with-standard-io-syntax
-             (let ((*package* #.*package*)
-                   (*print-case* :downcase)
-                   (*print-right-margin* 80))
-               (pprint '(in-package #.(package-name *package*)) stream)
-               (terpri stream)
-               (pprint (serialize dist) stream)
-               (terpri stream)))))))
+(defun persist (&key (file #p "~/dist/distinfo.lisp") (if-exists :supersede))
+  (ensure-directories-exist file)
+  (with-open-file (stream file :direction :output :if-exists if-exists)
+    (with-standard-io-syntax
+      (let ((*package* #.*package*)
+            (*print-case* :downcase)
+            (*print-right-margin* 80)
+            (*print-readably* NIL))
+        (format stream "~&;;;;; Distinfo compiled automatically~%")
+        (pprint '(in-package #.(package-name *package*)) stream)
+        (terpri stream)
+        (format stream "~&;;;; Projects~%")
+        (loop for project being the hash-values of *projects*
+              do (pprint (serialize project) stream))
+        (format stream "~&;;;; Dists~%")
+        (loop for dist being the hash-values of *dists*
+              do (pprint (serialize dist) stream))
+        (terpri stream)))))
 
-(defun restore (&key (file #p "~/dist/*.distinfo") (if-does-not-exist :error))
-  (if (wild-pathname-p file)
-      (dolist (path (directory file))
-        (restore :file path))
-      (with-open-file (stream file :direction :input :if-does-not-exist if-does-not-exist)
-        (when stream
-          (with-standard-io-syntax
-            (let ((*package* #.*package*))
-              (loop for form = (read stream NIL #1='#:eof)
-                    until (eq form #1#)
-                    do (eval form))))))))
+(defun restore (&key (file #p "~/dist/distinfo.lisp") (if-does-not-exist :error))
+  (with-standard-io-syntax
+    (let ((*package* #.*package*))
+      (load file :if-does-not-exist if-does-not-exist))))
 
-(defmacro define-dist (name initargs &body body)
-  (let ((projects (loop for thing in body
-                        unless (eql :release (car thing))
-                        collect thing))
-        (releases (loop for thing in body
-                        when (eql :release (car thing))
-                        collect (rest thing)))
-        (type (getf initargs :type 'timestamp-versioned-dist)))
-    (remf initargs :type)
-    `(let ((existing (or (dist ',name)
-                         (setf (dist ',name) (make-instance ',type :name ',name ,@(loop for (k v) on initargs by #'cddr
-                                                                                        collect k collect `',v))))))
-       (ensure-instance existing ',type :projects ',projects :releases ',releases))))
+(defmacro define-project (name sources &body body)
+  (form-fiddle:with-body-options (releases initargs) body
+    `(let ((project (setf (project ',name)
+                          (ensure-instance (project ',name) 'project :name ',name :sources ',sources
+                                           ,@(loop for (k v) on initargs by #'cddr
+                                                   collect k collect `',v)))))
+       ,@(loop for release in releases
+               collect `(ensure-release ',release project))
+       project)))
+
+(defmacro define-dist (name projects &body body)
+  (form-fiddle:with-body-options (releases initargs) body
+    (let ((type (getf initargs :type 'timestamp-versioned-dist)))
+      (remf initargs :type)
+      `(let ((dist (setf (dist ',name)
+                         (ensure-instance (dist ',name) ',type
+                                          :name ',name ,@(loop for (k v) on initargs by #'cddr
+                                                               collect k collect `',v)
+                                          :projects ',projects :releases ',releases))))
+         dist))))
