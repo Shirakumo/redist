@@ -18,7 +18,20 @@
                            #p"CVS/"
                            #p"CVSROOT/"
                            #p"_darcs/"
-                           #p".travis.yml"))
+                           #p".travis.yml"
+                           #p"{APPNAME}.asd"
+                           #p"/debian/"
+                           #p"/unused/"
+                           #p"/external/cffi.darcs/"
+                           #p"/external/lift.darcs/"
+                           #p"/sav/"
+                           #p"/1580-frozen/"
+                           #p"/Code/fset"
+                           #p"/Outdated Demos/"
+                           #p"jenkins/"
+                           #p"_build/"
+                           #p"ext/rt/"
+                           #p"asd-generator-data.asd"))
 
 (defgeneric make-release (thing &key))
 (defgeneric find-project (name dist))
