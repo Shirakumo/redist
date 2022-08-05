@@ -380,13 +380,7 @@
   (unless (source-sha1 release)
     (setf (source-sha1 release) (digest (source-files release) :sha1)))
   (unless (slot-boundp release 'systems)
-    (setf (systems release)
-          (loop for asd in (loop for file in (source-files release)
-                                 when (string= "asd" (pathname-type file))
-                                 collect file)
-                append (loop for (name . deps) in (find-file-systems asd)
-                             unless (find name (excluded-systems (project release)) :test #'string-equal)
-                             collect (make-instance 'system :project release :name name :file asd :dependencies deps)))))
+    (setf (systems release) T))
   (pushnew release (releases (project release))))
 
 (defmethod shared-initialize :after ((release project-release) slot &key (systems NIL systems-p))
@@ -398,6 +392,15 @@
 
 (defmethod (setf systems) :around ((systems cons) (release project-release))
   (call-next-method (sort (loop for system in systems collect (ensure-system system release)) #'string< :key #'name) release))
+
+(defmethod (setf systems) ((systems (eql T)) (release project-release))
+  (setf (systems release)
+        (loop for asd in (loop for file in (source-files release)
+                               when (string= "asd" (pathname-type file))
+                               collect file)
+              append (loop for (name . deps) in (find-file-systems asd)
+                           unless (find name (excluded-systems (project release)) :test #'string-equal)
+                           collect (make-instance 'system :project release :name name :file asd :dependencies deps)))))
 
 (defmethod ensure-system ((spec cons) (release project-release))
   (destructuring-bind (name . initargs) spec
