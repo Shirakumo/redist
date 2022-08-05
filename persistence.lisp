@@ -93,13 +93,14 @@
 
 (defmacro define-project (name sources &body body)
   (form-fiddle:with-body-options (releases initargs) body
-    `(let ((project (setf (project ',name)
-                          (ensure-instance (project ',name) 'project :name ',name :sources ',sources
-                                           ,@(loop for (k v) on initargs by #'cddr
-                                                   collect k collect `',v)))))
-       ,@(loop for release in releases
-               collect `(ensure-release ',release project))
-       project)))
+    (let ((name (string-downcase name)))
+      `(let ((project (setf (project ,name)
+                            (ensure-instance (project ',name) 'project :name ,name :sources ',sources
+                                             ,@(loop for (k v) on initargs by #'cddr
+                                                     collect k collect `',v)))))
+         ,@(loop for release in releases
+                 collect `(ensure-release ',release project))
+         project))))
 
 (defmacro define-dist (name projects &body body)
   (form-fiddle:with-body-options (releases initargs) body

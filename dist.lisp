@@ -6,6 +6,7 @@
 
 (in-package #:org.shirakumo.redist)
 
+(defvar *default-source-directory* #p "~/dist/sources/")
 (defvar *excluded-paths* '(#p".git/"
                            #p".github/"
                            #p".gitignore"
@@ -167,13 +168,17 @@
 
 (defclass project ()
   ((name :initarg :name :initform (arg! :name) :accessor name)
-   (source-directory :initarg :source-directory :initform (arg! :source-directory) :accessor source-directory)
+   (source-directory :initarg :source-directory :accessor source-directory)
    (sources :initform NIL :accessor sources)
    (disabled-p :initarg :disabled-p :initform NIL :accessor disabled-p)
    (excluded-systems :initarg :excluded-systems :initform () :accessor excluded-systems)
    (excluded-paths :initarg :excluded-paths :initform () :accessor excluded-paths)
    (releases :initform () :accessor releases)
    (version-cache :initform NIL :accessor version-cache)))
+
+(defmethod initialize-instance :after ((project project) &key)
+  (unless (slot-boundp project 'source-directory)
+    (setf (source-directory project) (pathname-utils:subdirectory *default-source-directory* (name project)))))
 
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p))
   (when releases-p (setf (releases project) releases))
