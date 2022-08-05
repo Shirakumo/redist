@@ -69,7 +69,7 @@
   (destructuring-bind (version &rest args) spec
     (apply #'ensure-instance
            (find-release version dist) 'release
-           (list* :version version args))))
+           :dist dist :version version args)))
 
 (defmethod make-release ((dist dist) &key (version (next-version dist)) update verbose (projects NIL projects-p))
   (let ((prior (find version (releases dist) :key #'version :test #'equal)))
@@ -168,11 +168,11 @@
 (defclass project ()
   ((name :initarg :name :initform (arg! :name) :accessor name)
    (source-directory :initarg :source-directory :initform (arg! :source-directory) :accessor source-directory)
-   (sources :initarg :sources :initform NIL :accessor sources)
+   (sources :initform NIL :accessor sources)
    (disabled-p :initarg :disabled-p :initform NIL :accessor disabled-p)
    (excluded-systems :initarg :excluded-systems :initform () :accessor excluded-systems)
    (excluded-paths :initarg :excluded-paths :initform () :accessor excluded-paths)
-   (releases :initarg :releases :initform () :accessor releases)
+   (releases :initform () :accessor releases)
    (version-cache :initform NIL :accessor version-cache)))
 
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p))
@@ -201,7 +201,7 @@
 (defmethod ensure-release ((spec cons) (project project))
   (destructuring-bind (version . initargs) spec
     (apply #'ensure-instance (find-release version project) 'project-release
-           :version version initargs)))
+           :project project :version version initargs)))
 
 (defmethod make-release ((project project) &key update version verbose)
   (when verbose
