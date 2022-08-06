@@ -32,6 +32,7 @@
                :eclector
                :simple-inferiors
                :pathname-utils
+               :filesystem-utils
                :uiop
                :form-fiddle
                :documentation-utils))

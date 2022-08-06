@@ -7,6 +7,9 @@
 (defpackage #:org.shirakumo.redist
   (:shadow #:compile)
   (:use #:cl)
+  (:local-nicknames
+   (#:filesystem-utils #:org.shirakumo.filesystem-utils)
+   (#:pathname-utils #:org.shirakumo.pathname-utils))
   ;; toolkit.lisp
   (:export)
   ;; asdf.lisp

@@ -66,9 +66,9 @@
   (let ((base (truename base)))
     (loop for file in (directory (merge-pathnames (make-pathname :name :wild :type :wild :directory '(:relative :wild-inferiors)) base))
           for relative = (pathname-utils:enough-pathname file base)
-          unless (or (pathname-utils:directory-p file)
-                     (loop for excluded in exclude
-                           thereis (file-match-p relative excluded)))
+          when (and (filesystem-utils:file-p file)
+                    (not (loop for excluded in exclude
+                               thereis (file-match-p relative excluded))))
           collect file)))
 
 (defun ensure-instance (instance type &rest initargs)
