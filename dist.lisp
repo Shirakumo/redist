@@ -254,6 +254,9 @@
 (defmethod remove-project (project (dist dist))
   (remove-project (find-project project dist) dist))
 
+(defmethod remove-project (project (dist symbol))
+  (remove-project project (or (dist dist) (error "No dist with name ~s found." dist))))
+
 (defmethod add-project ((project project) (dist dist))
   (let ((prior (find (name project) (projects dist) :key #'name :test #'equalp)))
     (when prior
@@ -266,6 +269,9 @@
 (defmethod add-project ((pathname pathname) (dist dist))
   (let ((name (car (last (pathname-directory pathname)))))
     (add-project (make-instance 'project :name name :source-directory pathname) dist)))
+
+(defmethod add-project (project (dist symbol))
+  (add-project project (or (dist dist) (error "No dist with name ~s found." dist))))
 
 (defmethod add-project (thingy (dist dist))
   (add-project (ensure-project thingy) dist))
