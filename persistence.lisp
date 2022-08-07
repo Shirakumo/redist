@@ -15,11 +15,17 @@
 (defmethod (setf dist) ((dist dist) (name symbol))
   (setf (gethash name *dists*) dist))
 
+(defun list-dists ()
+  (sort (alexandria:hash-table-values *dists*) #'string< :key #'name))
+
 (defmethod project ((name string))
   (gethash name *projects*))
 
 (defmethod (setf project) ((project project) (name string))
   (setf (gethash name *projects*) project))
+
+(defun list-projects ()
+  (sort (alexandria:hash-table-values *projects*) #'string< :key #'name))
 
 (defmacro define-project (name sources &body body)
   (form-fiddle:with-body-options (releases initargs) body

@@ -92,7 +92,7 @@ available-versions-url: ~a"
                                      :if-exists if-exists)
                (write-dist-releases-index dist stream))
              (filesystem-utils:copy-file (merge-pathnames "template/redist.css" *here*) output)
-             (generate-html output "index" "index" :dists (alexandria:hash-table-values *dists*) :projects (alexandria:hash-table-values *projects*))
+             (generate-html output "index" "index" :dists (list-dists) :projects (list-projects))
              (generate-html (f (path dist)) "index" "dist" :dist dist))
            (setf success T))
       ;; We did not return successfully, so remove the release again.
