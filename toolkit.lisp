@@ -6,7 +6,7 @@
 
 (in-package #:org.shirakumo.redist)
 
-(defun tar (files output &key (if-exists :error) (base #p"/"))
+(defun tar (files output &key (if-exists :error) (base #p"/") (archive-root #p""))
   (archive:with-open-archive (archive output
                               :direction :output
                               :if-exists if-exists)
@@ -14,7 +14,18 @@
            (*default-pathname-defaults* base))
       (dolist (file files)
         (with-simple-restart (continue "Ignore the failing file.")
-          (let ((entry (archive:create-entry-from-pathname archive (pathname-utils:enough-pathname file base))))
+          ;; SIGH: have to redo this here so that we can fake the archive root.
+          (let* ((stat (archive::stat file))
+                 (entry (make-instance 'archive::tar-entry
+                                       :pathname (merge-pathnames (pathname-utils:enough-pathname file base) archive-root)
+                                       :mode (logand archive::+permissions-mask+ (archive::stat-mode stat))
+                                       :typeflag (archive::typeflag-for-mode (archive::stat-mode stat))
+                                       :uid (archive::stat-uid stat)
+                                       :gid (archive::stat-gid stat)
+                                       :size (archive::stat-size stat)
+                                       :mtime (archive::stat-mtime stat))))
+            (when (pathname-utils:directory-p file)
+              (change-class entry 'archive::directory-tar-entry))
             (with-open-file (stream file
                                     :direction :input
                                     :element-type '(unsigned-byte 8)
@@ -26,9 +37,9 @@
 (defun gz (file output &key (if-exists :error))
   (salza2:gzip-file file output :if-exists if-exists))
 
-(defun tgz (files output &key (if-exists :error) (base #p"/"))
+(defun tgz (files output &rest tar-args &key (if-exists :error) &allow-other-keys)
   (let ((tar (make-pathname :type "tar" :defaults output)))
-    (tar files tar :if-exists :error :base base)
+    (apply #'tar files tar :if-exists :error tar-args)
     (unwind-protect
          (gz tar output :if-exists if-exists)
       (delete-file tar))))

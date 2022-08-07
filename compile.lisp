@@ -115,5 +115,6 @@ available-versions-url: ~a"
                               (continue e))))
         (update (project release) :version (version release))
         (prog1 (tgz (source-files release) (ensure-directories-exist target)
+                    :archive-root (make-pathname :directory (list :relative (prefix release)))
                     :base (source-directory (project release)) :if-exists if-exists)
           (setf (archive-md5 release) (digest (merge-pathnames (path release) output) :md5)))))))
