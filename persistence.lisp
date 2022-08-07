@@ -13,7 +13,7 @@
   (gethash name *dists*))
 
 (defmethod (setf dist) ((dist dist) (name symbol))
-  (setf (gethash name *dists*) value))
+  (setf (gethash name *dists*) dist))
 
 (defmethod project ((name string))
   (gethash name *projects*))

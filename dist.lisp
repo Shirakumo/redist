@@ -189,13 +189,11 @@
    (releases :initform () :accessor releases)
    (version-cache :initform NIL :accessor version-cache)))
 
-(defmethod initialize-instance :after ((project project) &key)
-  (unless (slot-boundp project 'source-directory)
-    (setf (source-directory project) (pathname-utils:subdirectory *default-source-directory* (name project)))))
-
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p))
   (when releases-p (setf (releases project) releases))
   (when sources-p (setf (sources project) sources))
+  (unless (slot-boundp project 'source-directory)
+    (setf (source-directory project) (pathname-utils:subdirectory *default-source-directory* (name project))))
   (when (and (sources project)
              (not (disabled-p project))
              (or (not (probe-file (source-directory project)))
