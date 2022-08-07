@@ -34,5 +34,6 @@
                :pathname-utils
                :filesystem-utils
                :uiop
+               :clip
                :form-fiddle
                :documentation-utils))

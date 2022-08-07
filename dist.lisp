@@ -117,6 +117,9 @@
 (defmethod dist-url ((dist dist))
   (format NIL "~a/~a" (url dist) (namestring (dist-path dist))))
 
+(defmethod path ((dist dist))
+  (make-pathname :directory `(:relative ,(string-downcase (name dist)))))
+
 (defmethod releases-path ((dist dist))
   (make-pathname :name (format NIL "~(~a~)-versions" (name dist)) :type "txt"))
 
@@ -308,6 +311,7 @@
 (defclass release ()
   ((dist :initarg :dist :initform (arg! :dist) :accessor dist)
    (version :initarg :version :initform (arg! :version) :accessor version)
+   (timestamp :initarg :timestamp :initform (get-universal-time) :accessor timestamp)
    (projects :accessor projects)))
 
 (defmethod shared-initialize :after ((release release) slots &key (projects NIL projects-p))
@@ -369,14 +373,18 @@
 (defmethod dist-url ((release release))
   (format NIL "~a/~a" (url (dist release)) (namestring (dist-path release))))
 
+(defmethod path ((release release))
+  (merge-pathnames (make-pathname :directory `(:relative ,(version release)))
+                   (path (dist release))))
+
 (defmethod releases-path ((release release))
-  (make-pathname :name "releases" :type "txt" :directory `(:relative ,(version release))))
+  (merge-pathnames (make-pathname :name "releases" :type "txt") (path release)))
 
 (defmethod systems-path ((release release))
-  (make-pathname :name "systems" :type "txt" :directory `(:relative ,(version release))))
+  (merge-pathnames (make-pathname :name "systems" :type "txt") (path release)))
 
 (defmethod dist-path ((release release))
-  (make-pathname :name (string-downcase (name (dist release))) :type "txt" :directory `(:relative ,(version release))))
+  (merge-pathnames (make-pathname :name (string-downcase (name (dist release))) :type "txt") (path release)))
 
 (defmethod version< ((a release) (b release))
   (version< (version a) (version b)))

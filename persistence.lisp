@@ -71,6 +71,7 @@
 
 (defmethod serialize append ((release release))
   (list (version release)
+        :timestamp (timestamp release)
         :projects (loop for project in (projects release)
                         collect (list (name project) :version (version project)))))
 

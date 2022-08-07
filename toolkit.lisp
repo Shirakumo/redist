@@ -6,6 +6,8 @@
 
 (in-package #:org.shirakumo.redist)
 
+(defvar *here* #.(make-pathname :name NIL :type NIL :defaults (or *compile-file-pathname* *load-pathname*)))
+
 (defun tar (files output &key (if-exists :error) (base #p"/") (archive-root #p""))
   (archive:with-open-archive (archive output
                               :direction :output

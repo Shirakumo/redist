@@ -53,6 +53,7 @@
    #:release
    #:dist
    #:version
+   #:timestamp
    #:projects
    #:releases-url
    #:systems-url
