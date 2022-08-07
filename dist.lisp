@@ -184,7 +184,7 @@
 
 (defclass project ()
   ((name :initarg :name :initform (arg! :name) :accessor name)
-   (source-directory :initarg :source-directory :accessor source-directory)
+   (source-directory :accessor source-directory)
    (sources :initform NIL :accessor sources)
    (disabled-p :initarg :disabled-p :initform NIL :accessor disabled-p)
    (excluded-systems :initarg :excluded-systems :initform () :accessor excluded-systems)
@@ -192,9 +192,10 @@
    (releases :initform () :accessor releases)
    (version-cache :initform NIL :accessor version-cache)))
 
-(defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p))
+(defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory)
   (when releases-p (setf (releases project) releases))
   (when sources-p (setf (sources project) sources))
+  (when source-directory (setf (source-directory project) (truename source-directory)))
   (unless (slot-boundp project 'source-directory)
     (setf (source-directory project) (pathname-utils:subdirectory *default-source-directory* (name project))))
   (when (and (sources project)
