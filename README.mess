@@ -49,3 +49,16 @@ Should you want to add or remove projects from a dist later, you can simply rede
 In order to update the project sources, you can either individually ``update`` a project, or pass ``:update T`` to ``compile``. Additionally, if you'd prefer some extra output, since creating a release can take a while, you can also pass ``:verbose T``.
 
 If you would like to produce a dist from the official "quicklisp-projects"(https://github.com/quicklisp/quicklisp-projects), simply clone that repository and load its data in via ``parse-quicklisp-projects``. Be careful though, cloning all the repositories takes quite a while, and a few of the links have since broken.
+
+## HTML
+Along with the actual dist files, Redist also generates a set of HTML. Specifically, it does so for:
+
+- The set of dists / projects you serve
+- Each dist
+- Each project
+- Each release
+- Each project release
+
+This should help people explore the stuff you host on your servers without having to actually install the dist. It also helps to have a more interactive way to search through versions.
+
+If you would like to customise how the pages look, please have a look at the files in the ``template/`` directory. The HTML pages are generated using "Clip"(https://shinmera.github.io/clip), and the CSS is generated using "LASS"(https://shinmera.github.io/LASS).
