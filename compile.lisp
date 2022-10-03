@@ -101,11 +101,11 @@ available-versions-url: ~a"
         ;;        need to be careful to not remove files from shared releases
         (setf (releases dist) (remove release (releases dist)))))))
 
-(defmethod compile ((release release) &key (output *default-output-directory*) (if-exists :supersede) verbose)
+(defmethod compile ((release release) &key (output *default-output-directory*) (if-exists :supersede) verbose force)
   (ensure-directories-exist output)
   ;; Assemble files from new releases
   (dolist (project (projects release))
-    (compile project :output output :if-exists if-exists :verbose verbose))
+    (compile project :output output :if-exists if-exists :verbose verbose :force force))
   (flet ((f (path)
            (ensure-directories-exist (merge-pathnames path output))))
     (with-open-file (stream (f (dist-path release))
