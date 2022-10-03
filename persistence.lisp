@@ -105,13 +105,13 @@
             (*print-case* :downcase)
             (*print-right-margin* 80)
             (*print-readably* NIL))
-        (format stream "~&;;;;; Distinfo compiled automatically~%")
+        (format stream "~&;;;;; Distinfo compiled automatically")
         (pprint '(in-package #.(package-name *package*)) stream)
         (terpri stream)
-        (format stream "~&;;;; Projects~%")
+        (format stream "~&~%;;;; Projects")
         (loop for project being the hash-values of *projects*
               do (pprint (serialize project) stream))
-        (format stream "~&;;;; Dists~%")
+        (format stream "~&~%;;;; Dists")
         (loop for dist being the hash-values of *dists*
               do (pprint (serialize dist) stream))
         (terpri stream)))))
@@ -135,7 +135,8 @@
         (format stream "~&#-quicklisp (load ~s)~%" (ql-impl-util::quicklisp-init-file-form))
         (format stream "~&(ql:quickload :redist :silent T)~%~%")
         (format stream "~&(setf org.shirakumo.redist:*distinfo-file* ~s)~%" *distinfo-file*)
-        (format stream "~&(org.shirakumo.redist:main (rest (uiop:command-line-arguments)))~%")))))
+        (format stream "~&(org.shirakumo.redist:main (rest (uiop:command-line-arguments)))~%"))))
+  file)
 
 (defun main (&optional (args (uiop:command-line-arguments)))
   (let ((args (or args '("--help")))
@@ -181,20 +182,23 @@ Arguments:
   [--compile|-c]             Compiles dists when specified
   [--verbose|-v]             Produces verbose output when specified
   [--list-dists|-l]          Lists known dists when specified and quits
-  [--help|-h]                Shows this help when specified and quits"
+  [--help|-h]                Shows this help when specified and quits~%"
                               (first (uiop:raw-command-line-arguments)))
                       (uiop:quit))
                      (T
                       (format T "~&Unknown argument: ~a" key)
                       (uiop:quit 1)))))
+    (restore)
     (unless dists
       (setf dists (list-dists)))
     (when update
-      (dolist (dist dists)
-        (update dist :version version :verbose verbose))
+      (dolist (project (list-projects))
+        (update project :version version :verbose verbose))
       (persist))
     (when compile
       (dolist (dist dists)
-        (compile dist :if-exists :supersede :version version :verbose verbose))
+        (if version
+            (compile dist :if-exists :supersede :version version :verbose verbose)
+            (compile dist :if-exists :supersede :verbose verbose)))
       (persist))
     (uiop:quit)))
