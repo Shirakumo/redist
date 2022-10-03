@@ -180,6 +180,9 @@
 
 (defmethod ensure-source ((spec cons))
   (destructuring-bind (type url . initargs) spec
+    (when (typep type 'keyword)
+      (setf type (or (find-symbol (symbol-name type) #.*package*)
+                     (error "No source type with name ~s found!" type))))
     (apply #'make-instance type :url url initargs)))
 
 (defclass project ()

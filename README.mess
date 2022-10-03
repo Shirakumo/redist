@@ -14,10 +14,10 @@ Creating your own dist is rather simple:
 
 :: common lisp
 (redist:define-project my-project
-    ((:git :url "https://github.com/someone/my-project.git")))
+    ((:git "https://github.com/someone/my-project.git")))
 
 (redist:define-project other-project
-    ((:http :url "https://someone.com/project.tgz")))
+    ((:http "https://someone.com/project.tgz")))
 
 (redist:define-dist my-dist (my-project other-project)
   :url "http://my.public.url")
