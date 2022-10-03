@@ -77,13 +77,15 @@
    #:dependencies)
   ;; persistence.lisp
   (:export
+   #:*distinfo-file*
    #:dist
    #:project
    #:serialize
    #:persist
    #:restore
    #:define-project
-   #:define-dist)
+   #:define-dist
+   #:main)
   ;; sources.lisp
   (:export
    #:cvs

@@ -13,6 +13,12 @@
   :homepage "https://Shirakumo.github.io/redist/"
   :bug-tracker "https://github.com/Shirakumo/redist/issues"
   :source-control (:git "https://github.com/Shirakumo/redist.git")
+  :build-operation "program-op"
+  :build-pathname
+  #+windows "redist.exe"
+  #+linux "redist.run"
+  #-(or windows linux) "redist.o"
+  :entry-point "org.shirakumo.dist::main"
   :serial T
   :components ((:file "package")
                (:file "toolkit")

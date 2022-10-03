@@ -6,6 +6,7 @@
 
 (in-package #:org.shirakumo.redist)
 
+(defvar *distinfo-file* (merge-pathnames "../distinfo.lisp" *default-source-directory*))
 (defvar *dists* (make-hash-table :test 'eql))
 (defvar *projects* (make-hash-table :test 'equalp))
 
@@ -96,7 +97,7 @@
 (defmethod serialize append ((manager source-manager))
   (list (type-of manager) (url manager)))
 
-(defun persist (&key (file #p "~/dist/distinfo.lisp") (if-exists :supersede))
+(defun persist (&key (file *distinfo-file*) (if-exists :supersede))
   (ensure-directories-exist file)
   (with-open-file (stream file :direction :output :if-exists if-exists)
     (with-standard-io-syntax
@@ -115,7 +116,85 @@
               do (pprint (serialize dist) stream))
         (terpri stream)))))
 
-(defun restore (&key (file #p "~/dist/distinfo.lisp") (if-does-not-exist :error))
+(defun restore (&key (file *distinfo-file*) (if-does-not-exist :error))
   (with-standard-io-syntax
     (let ((*package* #.*package*))
       (load file :if-does-not-exist if-does-not-exist))))
+
+(defun create-update-script (&key (file (merge-pathnames "redist.lisp" *distinfo-file*)) (if-exists :supersede))
+  (ensure-directories-exist file)
+  (with-open-file (stream file :direction :output :if-exists if-exists)
+    (with-standard-io-syntax
+      (let ((*package* #.*package*)
+            (*print-case* :downcase)
+            (*print-right-margin* 80)
+            (*print-readably* NIL))
+        (format stream "~&#| Dist update script compiled automatically~%")
+        (format stream "~&~a --load \"$0\" -- \"$@\"; exit~%" (first (uiop:raw-command-line-arguments)))
+        (format stream "~&# |#~%~%")
+        (format stream "~&#-quicklisp (load ~s)~%" (ql-impl-util::quicklisp-init-file-form))
+        (format stream "~&(ql:quickload :redist :silent T)~%~%")
+        (format stream "~&(setf org.shirakumo.redist:*distinfo-file* ~s)~%" *distinfo-file*)
+        (format stream "~&(org.shirakumo.redist:main (rest (uiop:command-line-arguments)))~%")))))
+
+(defun main (&optional (args (uiop:command-line-arguments)))
+  (let ((args (or args '("--help")))
+        (dists '())
+        (update NIL)
+        (compile NIL)
+        (verbose NIL)
+        (version NIL))
+    (loop for (key val) = args
+          while key
+          do (flet ((argp (&rest choices)
+                      (loop for choice in choices thereis (string-equal key choice))))
+               (cond ((argp "--dist" "-d")
+                      (push val dists)
+                      (setf args (cddr args)))
+                     ((argp "--info" "-i")
+                      (setf *distinfo-file* (pathname-utils:parse-native-namestring val))
+                      (setf args (cddr args)))
+                     ((argp "--version")
+                      (setf version val)
+                      (setf args (cddr args)))
+                     ((argp "--update" "-u")
+                      (setf update T)
+                      (setf args (cdr args)))
+                     ((argp "--compile" "-c")
+                      (setf compile T)
+                      (setf args (cdr args)))
+                     ((argp "--verbose" "-v")
+                      (setf verbose T)
+                      (setf args (cdr args)))
+                     ((argp "--list-dists" "-l")
+                      (dolist (dist (list-dists))
+                        (format T "~&~a~%" dist))
+                      (uiop:quit))
+                     ((argp "--help" "-h")
+                      (format T "Usage: ~a
+
+Arguments:
+  [-d|--dist dist]*          The dists to tackle. Can be specified many times.
+  [-i|--info distinfo-file]  The distinfo file to load from.
+  [--version version]        The version to produce
+  [--update|-u]              Updates dists when specified
+  [--compile|-c]             Compiles dists when specified
+  [--verbose|-v]             Produces verbose output when specified
+  [--list-dists|-l]          Lists known dists when specified and quits
+  [--help|-h]                Shows this help when specified and quits"
+                              (first (uiop:raw-command-line-arguments)))
+                      (uiop:quit))
+                     (T
+                      (format T "~&Unknown argument: ~a" key)
+                      (uiop:quit 1)))))
+    (unless dists
+      (setf dists (list-dists)))
+    (when update
+      (dolist (dist dists)
+        (update dist :version version :verbose verbose))
+      (persist))
+    (when compile
+      (dolist (dist dists)
+        (compile dist :if-exists :supersede :version version :verbose verbose))
+      (persist))
+    (uiop:quit)))
