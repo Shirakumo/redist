@@ -198,7 +198,7 @@
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory)
   (when releases-p (setf (releases project) releases))
   (when sources-p (setf (sources project) sources))
-  (when source-directory (setf (source-directory project) (truename source-directory)))
+  (when source-directory (setf (source-directory project) (uiop:truenamize source-directory)))
   (unless (slot-boundp project 'source-directory)
     (setf (source-directory project) (pathname-utils:subdirectory *default-source-directory* (name project))))
   (when (and (sources project)
