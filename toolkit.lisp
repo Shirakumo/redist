@@ -145,3 +145,11 @@
 
 (defun verbose (format &rest args)
   (format *error-output* "~&; ~?~%" format args))
+
+(defun url-extract-name (url)
+  ;; FIXME: this sucks
+  (let ((slash (position #\/ url :from-end T)))
+    (if (and (< (length ".git") (length url))
+             (string= ".git" url :start2 (- (length url) (length ".git"))))
+        (subseq url (1+ slash) (- (length url) (length ".git")))
+        (subseq url (1+ slash)))))

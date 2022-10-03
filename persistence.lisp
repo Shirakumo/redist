@@ -39,6 +39,11 @@
                  collect `(ensure-release ',release project))
          project))))
 
+(defun quick-add-projects (source-type &rest urls)
+  (loop for url in urls
+        for name = (url-extract-name url)
+        collect (setf (project name) (ensure-instance (project name) 'project :name name :sources `((,source-type ,url))))))
+
 (defmacro define-dist (name projects &body body)
   (form-fiddle:with-body-options (releases initargs) body
     (let ((type (getf initargs :type 'timestamp-versioned-dist)))
