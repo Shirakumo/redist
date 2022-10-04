@@ -75,9 +75,12 @@ available-versions-url: ~a"
   (remf args :update)
   (remf args :version)
   (remf args :projects)
-  (let ((release (if projects-p
-                     (make-release dist :update update :version version :verbose verbose :projects projects)
-                     (make-release dist :update update :version version :verbose verbose)))
+  (when verbose
+    (verbose "Compiling ~a ~a" (name dist) version))
+  (let ((release (or (find-release version dist)
+                     (if projects-p
+                         (make-release dist :update update :version version :verbose verbose :projects projects)
+                         (make-release dist :update update :version version :verbose verbose))))
         (success NIL))
     (unwind-protect
          (multiple-value-prog1 (apply #'compile release args)
@@ -102,6 +105,8 @@ available-versions-url: ~a"
         (setf (releases dist) (remove release (releases dist)))))))
 
 (defmethod compile ((release release) &key (output *default-output-directory*) (if-exists :supersede) verbose force)
+  (when verbose
+    (verbose "Compiling release ~a" (version release)))
   (ensure-directories-exist output)
   ;; Assemble files from new releases
   (dolist (project (projects release))
@@ -127,7 +132,7 @@ available-versions-url: ~a"
   (let ((target (merge-pathnames (path release) output)))
     (when (or force (not (probe-file target)))
       (when verbose
-        (verbose "Compiling ~a" (name (project release))))
+        (verbose "Compiling ~a ~a" (name (project release)) (version release)))
       (handler-bind ((error (lambda (e)
                               (when verbose
                                 (verbose "~a" e))

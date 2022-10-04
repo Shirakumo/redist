@@ -504,6 +504,12 @@ See SYSTEM (type)"))
 
 ;;; persistence.lisp
 (docs:define-docs
+  (variable *distinfo-file*
+    "Default location for the distinfo source file.
+
+See PERSIST
+See RESTORE")
+  
   (function serialize
     "Serialises the given object into an s-expression form.
 
@@ -513,6 +519,7 @@ See RESTORE")
   (function persist
     "Persists the dist/s to disk, to allow reloading of its information in the future.
 
+See *DISTINFO-FILE*
 See RESTORE")
   
   (function restore
@@ -520,6 +527,7 @@ See RESTORE")
 
 Note that this will *update* existing dists, not replace their data.
 
+See *DISTINFO-FILE*
 See PERSIST")
 
   (function define-project
@@ -659,6 +667,11 @@ See SOURCE-MANAGER (type)"))
 
 ;;; compile.lisp
 (docs:define-docs
+  (variable *default-output-directory*
+    "Standard directory to put dist compilation results.
+
+See COMPILE")
+  
   (function compile
     "Compile a dist release.
 
