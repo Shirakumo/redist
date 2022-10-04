@@ -38,6 +38,8 @@ compile               Compile a dist release
   -v --verbose           If specified shows updates about the progress
   -f --force             If specified compiles the dist version even
                          if it exists already
+  -x --overwrite         Overwrite the last release. Cannot be used
+                         together with version. Implies --force
 
 update                Update local project checkouts
   -v --version version   Specify the version to update to. If
@@ -54,7 +56,7 @@ list                  List known objects
   -d --dist dist         The dist to list releases of
 
 add                   Add a new project or add a project to a dist
-  url                    The url of the project's primary remote
+  url                    The url of the project's primary remote.
   -t --type type         The type of the remote source. Defaults to
                          GIT
   -n --name name         The name of the project. If unspecified is
@@ -72,31 +74,39 @@ remove                Remove a project from dists
 help                  Shows this help listing
 "))
 
-(defun main/compile (&key version update dist verbose force)
+(defun main/compile (&key version update dist verbose force overwrite)
+  (when overwrite
+    (when version (error "Cannot specify version alongside overwrite."))
+    (unless force (setf force T)))
   (let ((args (list* :if-exists :supersede :force force :update update :verbose verbose
                      (if version (list :version version)))))
     (dolist (dist (or (enlist dist) (list-dists)))
-      (apply #'compile dist args))))
+      (if overwrite
+          (apply #'compile dist :version (version (first (releases dist))) args)
+          (apply #'compile dist args)))))
 
 (defun main/update (&key version project verbose)
   (dolist (project (or (enlist project) (list-projects)))
     (update project :version version :verbose verbose)))
 
 (defun main/list (thing &key project dist)
-  (cond ((string= thing "projects")
+  (cond ((string-equal thing "projects")
          (dolist (project (list-projects))
-           (format T "~&~a~%" project)))
-        ((string= thing "dists")
+           (format T "~&~a~%" (name project))))
+        ((string-equal thing "dists")
          (dolist (dist (list-dists))
-           (format T "~&~a~%" dist)))
-        ((string= thing "releases")
+           (format T "~&~a~%" (name dist))))
+        ((string-equal thing "releases")
          (dolist (release (releases (cond (project (project project))
                                           (dist (dist dist))
                                           (T (error "Must pass either DIST or PROJECT.")))))
            (format T "~&~a~%" (version release))))
-        ((string= thing "sources")
-         (dolist (dist (list-dists))
-           (format T "~&~a~%" dist)))
+        ((string-equal thing "sources")
+         (labels ((rec (class)
+                    (dolist (class (c2mop:class-direct-subclasses class))
+                      (format T "~&~a~%" (class-name class))
+                      (rec class))))
+           (rec (find-class 'source-manager))))
         (T
          (error "Don't know how to list ~a." thing))))
 
@@ -119,15 +129,19 @@ help                  Shows this help listing
         (pargs ()))
     (loop for arg = (pop args)
           while arg
-          do (flet ((handle-argument (arg)
-                      (setf (getf kargs arg) (cond ((find arg flags :test #'string-equal)
-                                                    T)
-                                                   ((null (getf kargs arg))
-                                                    (pop args))
-                                                   ((consp (getf kargs arg))
-                                                    (list* (pop args) (getf kargs arg)))
-                                                   (T
-                                                    (list (pop args) (getf kargs arg)))))))
+          do (labels ((next-arg (arg)
+                        (if args
+                            (pop args)
+                            (error "Missing value for ~a" arg)))
+                      (handle-argument (arg)
+                        (setf (getf kargs arg) (cond ((find arg flags :test #'string-equal)
+                                                      T)
+                                                     ((null (getf kargs arg))
+                                                      (next-arg arg))
+                                                     ((consp (getf kargs arg))
+                                                      (list* (next-arg arg) (getf kargs arg)))
+                                                     (T
+                                                      (list (next-arg arg) (getf kargs arg)))))))
                (cond ((string= "--" arg :end2 2)
                       (handle-argument (find-symbol (string-upcase (subseq arg 2)) "KEYWORD")))
                      ((string= "-" arg :end2 1)
@@ -143,14 +157,18 @@ help                  Shows this help listing
 
 (defun main (&optional (args (uiop:command-line-arguments)))
   (let ((args (or args '("help"))))
-    (restore)
-    (destructuring-bind (command . args) args
-      (let ((cmdfun (find-symbol (format NIL "~a/~:@(~a~)" 'main command) #.*package*)))
-        (if cmdfun
-            (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force)
+    (handler-case
+        (destructuring-bind (command . args) args
+          (let ((cmdfun (find-symbol (format NIL "~a/~:@(~a~)" 'main command) #.*package*)))
+            (unless cmdfun
+              (error "No command named ~s." command))
+            (restore)
+            (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite)
                                                      :chars '(#\v :verbose #\u :update #\f :force
                                                               #\d :dist #\p :project #\n :version
-                                                              #\n :name #\t :type)))
-            (error "No command named ~s." command))))
+                                                              #\n :name #\t :type #\x :overwrite)))))
+      (error (e)
+        (format *error-output* "~&ERROR: ~a~%" e)
+        (uiop:quit 2)))
     (persist)
     (uiop:quit)))

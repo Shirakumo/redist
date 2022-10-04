@@ -103,4 +103,5 @@
    #:parse-quicklisp-source-file)
   ;; compile.lisp
   (:export
+   #:*default-output-directory*
    #:compile))

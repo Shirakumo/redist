@@ -13,6 +13,11 @@
 (defmethod dist ((name symbol))
   (gethash name *dists*))
 
+(defmethod dist ((name string))
+  (loop for dist being the hash-values of *dists*
+        when (string-equal name (name dist))
+        do (return dist)))
+
 (defmethod (setf dist) ((dist dist) (name symbol))
   (setf (gethash name *dists*) dist))
 
