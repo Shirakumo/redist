@@ -2,27 +2,40 @@
  :font-family "sans-serif"
  :font-size "14pt")
 
+(a
+ :text-decoration none)
+
 (body
  :overflow-x hidden
  :overflow-y scroll
+ :background (hex EFEFEF)
+ :margin 0
  
  (>article
+  :position relative
   :max-width 800px
+  :overflow-x hidden
   :margin 0 auto 10em auto
+  :padding 0.5em
+  :background (hex FAFAFA)
 
   (header
    :display flex
    :align-items center
    :padding 2em 0
    (h1
-    :margin 0)
+    :margin 0
+    :text-transform capitalize)
    (.button
     :display inline-block
     :background (hex 333333)
     :color (hex EEEEEE)
     :text-decoration none
-    :padding 0.1em 0.3em
-    :margin 0.1em 0.5em)
+    :text-align center
+    :padding 0.1em 0.3em)
+   (.button.back
+    :position absolute
+    :top 0 :left 0 :right 0)
    ((:and .button :hover)
     :background (hex 888888)))
 
@@ -32,7 +45,7 @@
 
   (ul
    :list-style none
-   :margins 0 :padding 0
+   :margin 0 :padding 0
    (li :display flex)
    ((:and li>* :first-child)
     :flex-grow 1)
@@ -40,6 +53,13 @@
     :margin 0 0.2em
     :white-space nowrap
     :text-overflow ellipsis))
+
+  ((.row label)
+   :font-weight bold)
+
+  (.dependencies
+   :white-space normal
+   :text-align right)
   (time
    :font-variant-numeric tabular-nums)
   (.version
@@ -49,9 +69,13 @@
    :border 1px solid (hex DDDDDD)
    :background (hex FAFAFA)
    :padding 0.75em
-   :font-size 0.8em))
+   :font-size 0.8em)
+  (.version.note
+   :font-size 0.75em
+   :color (hex A0A0A0)))
 
  (>footer
+  :margin 1em
   :font-size 0.8em
   :color (hex 888888)
   :text-align center))

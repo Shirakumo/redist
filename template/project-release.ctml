@@ -9,13 +9,13 @@
   <body>
     <article class="project">
       <header>
-        <a href="index.html" class="button">Back</a>
+        <a href="index.html" class="button back">Back</a>
         <h1><c:splice lquery="(text (name (project release)))" /> Release <c:splice lquery="(text (version release))"/></h1>
       </header>
-      <section class="info">
+      <section class="info" id="info">
         <div class="row">
           <label>Project:</label>
-          <span lquery="(text (name (project release)))">PROJECT</span>
+          <a href="index.html" lquery="(text (name (project release)))">PROJECT</a>
         </div>
         <div class="row">
           <label>Version:</label>
@@ -34,18 +34,20 @@
           <a lquery="(attr :href (file-namestring (path release)))">Download</a>
         </div>
       </section>
-      <section class="systems">
+      <section class="systems" id="systems">
         <p>
           The release contains the following systems:
         </p>
         <ul iterate='(systems release)'>
           <li class='system'>
             <span class="name" lquery='(text (name *))'>SYSTEM</span>
-            <span class="dependencies" lquery='(text (dependencies *))'>DEPENDENCIES</span>
+            <span class="dependencies" iterate="(dependencies *)">
+              <a lquery='(text *) (attr :href (when (find-system * T) (url (project (project (find-system * T))))))'></a>
+            </span>
           </li>
         </ul>
       </section>
-      <section class="files">
+      <section class="files" id="files">
         <p>
           The following files are contained in the release:
         </p>

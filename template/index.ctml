@@ -11,7 +11,7 @@
       <header>
         <h1>Quicklisp Distributions Index</h1>
       </header>
-      <section class="dists">
+      <section class="dists" id="dists">
         <p>
           The following distributions are hosted here:
         </p>
@@ -22,7 +22,7 @@
           </li>
         </ul>
       </section>
-      <section class="projects">
+      <section class="projects" id="projects">
         <p>
           The following projects are hosted here:
         </p>

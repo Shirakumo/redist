@@ -9,10 +9,10 @@
   <body>
     <article class="dist">
       <header>
-        <a href="../" class="button">Back</a>
+        <a href="../" class="button back">Back</a>
         <h1><c:splice lquery="(text (name dist))" /> Distribution Index</h1>
       </header>
-      <section class="install">
+      <section class="install" id="install">
         <p>
           To install this distribution, please execute the following code:
         </p>
@@ -20,7 +20,7 @@
 (ql-dist:install-dist "<c:splice lquery="(text (dist-url dist))" />")
         </code>
       </section>
-      <section class="releases">
+      <section class="releases" id="releases">
         <p>
           The following releases of the distribution are available:
         </p>
@@ -31,14 +31,16 @@
           </li>
         </ul>
       </section>
-      <section class="projects">
+      <section class="projects" id="projects">
         <p>
           At this time, the dist tracks the following projects:
         </p>
         <ul iterate='(projects dist)'>
           <li class='project'>
             <a lquery='(attr :href (format NIL "../archives/~a/" (name *))) (text (name *))'>PROJECT</a>
-            <span class='version' lquery='(text (version *))'></span>
+            <c:when test="(releases *)">
+              <a class='version note' lquery='(text (version *)) (attr :href (format NIL "../archives/~a/~a.html" (name *) (version *)))'></a>
+            </c:when>
           </li>
         </ul>
       </section>

@@ -48,6 +48,10 @@
 (defun version> (a b)
   (version< b a))
 
+(defmethod find-system (name (all (eql T)))
+  (loop for project in (list-projects)
+        thereis (find-system name project)))
+
 (defclass dist ()
   ((name :initarg :name :initform (arg! :name) :accessor name)
    (url :initarg :url :initform (arg! :url) :accessor url)
@@ -111,6 +115,10 @@
 (defmethod ensure-project ((name symbol))
   (ensure-project (string name)))
 
+(defmethod find-system (name (dist dist))
+  (loop for project in (projects dist)
+        thereis (find-system name project)))
+
 (defmethod releases-url ((dist dist))
   (format NIL "~a/~a" (url dist) (namestring (releases-path dist))))
 
@@ -125,6 +133,10 @@
 
 (defmethod dist-path ((dist dist))
   (make-pathname :name (string-downcase (name dist)) :type "txt"))
+
+(defmethod version ((dist dist))
+  (when (releases dist)
+    (version (first (releases dist)))))
 
 (defclass integer-versioned-dist (dist)
   ())
@@ -249,6 +261,12 @@
                      unless (find name (excluded-systems project) :test #'string-equal)
                      collect (make-instance 'system :project project :name name :file file :dependencies deps))))
 
+(defmethod dists ((project project))
+  (loop for dist in (list-dists)
+        when (and (releases dist)
+                  (find project (projects (first (releases dist))) :key #'project))
+        collect dist))
+
 (defmethod find-release (version (project project))
   (find version (releases project) :key #'version :test #'equal))
 
@@ -312,6 +330,16 @@
               (loop for source in (sources project)
                     thereis (ignore-errors (version source)))))))
 
+(defmethod find-system (name (project project))
+  (when (releases project)
+    (find-system name (first (releases project)))))
+
+(defmethod url ((project project))
+  (format NIL "/~a" (uiop:unix-namestring (path project))))
+
+(defmethod path ((project project))
+  (make-pathname :directory `(:relative "archives" ,(name project))))
+
 (defclass release ()
   ((dist :initarg :dist :initform (arg! :dist) :accessor dist)
    (version :initarg :version :initform (arg! :version) :accessor version)
@@ -367,6 +395,10 @@
 
 (defmethod find-project (name (release release))
   (find name (projects release) :key #'name :test #'equalp))
+
+(defmethod find-system (name (release release))
+  (loop for project in (projects release)
+        thereis (find-system name project)))
 
 (defmethod releases-url ((release release))
   (format NIL "~a/~a" (url (dist release)) (namestring (releases-path release))))
@@ -441,6 +473,16 @@
 (defmethod ensure-release ((release project-release) (project project))
   release)
 
+(defmethod find-system (name (release project-release))
+  (loop for system in (systems release)
+        thereis (find-system name system)))
+
+(defmethod dists ((release project-release))
+  (loop for dist in (list-dists)
+        when (and (releases dist)
+                  (find release (projects (first (releases dist)))))
+        collect dist))
+
 (defmethod name ((release project-release))
   (name (project release)))
 
@@ -449,7 +491,7 @@
 
 (defmethod path ((release project-release))
   (make-pathname :name (format NIL "~a-~a" (name release) (version release))
-                 :type "tgz" :directory `(:relative "archives" ,(name release))))
+                 :type "tgz" :defaults (path (project release))))
 
 (defmethod prefix ((release project-release))
   (format NIL "~a-~a" (name release) (version release)))
@@ -483,3 +525,7 @@
 
 (defmethod ensure-system ((system system) (release project-release))
   system)
+
+(defmethod find-system (name (system system))
+  (when (string-equal name (name system))
+    system))
