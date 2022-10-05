@@ -41,7 +41,9 @@ available-versions-url: ~a"
               (archive-md5 project)
               (source-sha1 project)
               (prefix project)
-              (remove-duplicates (loop for system in (systems project) collect (file-namestring (file system))) :test #'string=)))))
+              (remove-duplicates (loop for system in (systems project) collect (enough-namestring (file system)
+                                                                                                  (source-directory (project project))))
+                                 :test #'string=)))))
 
 (defun write-system-index (release stream)
   (format stream "# project system-file system-name [dependency1..dependencyN]~%")
