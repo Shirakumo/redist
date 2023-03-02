@@ -153,3 +153,25 @@
              (string= ".git" url :start2 (- (length url) (length ".git"))))
         (subseq url (1+ slash) (- (length url) (length ".git")))
         (subseq url (1+ slash)))))
+
+(defmacro do-list* ((el list) &body body)
+  (let ((l (gensym "LIST"))
+        (thunk (gensym "THUNK")))
+    `(let ((,l ,list))
+       (flet ((,thunk (,el)
+                ,@body))
+         (if lparallel:*kernel*
+             (lparallel:pmapcar #',thunk ,l)
+             (mapcar #',thunk ,l))))))
+
+(defmacro with-kernel (jobs &body body)
+  (let ((j (gensym "JOBS"))
+        (thunk (gensym "THUNK")))
+    `(let ((,j ,jobs))
+       (flet ((,thunk ()
+                ,@body))
+         (if ,j
+             (let ((lparallel:*kernel* (lparallel:make-kernel ,j)))
+               (unwind-protect (,thunk)
+                 (lparallel:end-kernel)))
+             (,thunk))))))

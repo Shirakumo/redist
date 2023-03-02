@@ -352,9 +352,8 @@
 (defmethod initialize-instance :after ((release release) &key dist update verbose)
   (unless (slot-boundp release 'projects)
     (setf (projects release)
-          (loop for project in (projects dist)
-                unless (disabled-p project)
-                collect (make-release project :update update :verbose verbose)))))
+          (do-list* (project (remove-if #'disabled-p (projects dist)))
+            (make-release project :update update :verbose verbose)))))
 
 (defmethod print-object ((release release) stream)
   (print-unreadable-object (release stream :type T)

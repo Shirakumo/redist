@@ -43,4 +43,5 @@
                :uiop
                :clip
                :form-fiddle
-               :documentation-utils))
+               :documentation-utils
+               :lparallel))

@@ -111,7 +111,7 @@ available-versions-url: ~a"
     (verbose "Compiling release ~a" (version release)))
   (ensure-directories-exist output)
   ;; Assemble files from new releases
-  (dolist (project (projects release))
+  (do-list* (project (projects release))
     (compile project :output output :if-exists if-exists :verbose verbose :force force))
   (flet ((f (path)
            (ensure-directories-exist (merge-pathnames path output))))

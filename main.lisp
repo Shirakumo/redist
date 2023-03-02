@@ -40,6 +40,7 @@ compile               Compile a dist release
                          if it exists already
   -x --overwrite         Overwrite the last release. Cannot be used
                          together with version. Implies --force
+  -j --jobs              Make the compilation threaded.
 
 update                Update local project checkouts
   -v --version version   Specify the version to update to. If
@@ -48,6 +49,7 @@ update                Update local project checkouts
                          specified multiple times. If unspecified, all
                          projects are updated
   -v --verbose           If specified shows updates about the progress
+  -j --jobs              Make the compilation threaded.
 
 list                  List known objects
   thing                  The thing to list. Can be projects, dists, or
@@ -74,20 +76,22 @@ remove                Remove a project from dists
 help                  Shows this help listing
 "))
 
-(defun main/compile (&key version update dist verbose force overwrite)
+(defun main/compile (&key version update dist verbose force overwrite jobs)
   (when overwrite
     (when version (error "Cannot specify version alongside overwrite."))
     (unless force (setf force T)))
   (let ((args (list* :if-exists :supersede :force force :update update :verbose verbose
                      (if version (list :version version)))))
-    (dolist (dist (or (enlist dist) (list-dists)))
-      (if overwrite
-          (apply #'compile dist :version (version (first (releases dist))) args)
-          (apply #'compile dist args)))))
+    (with-kernel (parse-integer jobs)
+      (do-plist (dist (or (enlist dist) (list-dists)))
+        (if overwrite
+            (apply #'compile dist :version (version (first (releases dist))) args)
+            (apply #'compile dist args))))))
 
-(defun main/update (&key version project verbose)
-  (dolist (project (or (enlist project) (list-projects)))
-    (update project :version version :verbose verbose)))
+(defun main/update (&key version project verbose jobs)
+  (with-kernel (parse-integer jobs)
+    (do-plist (project (or (enlist project) (list-projects)))
+      (update project :version version :verbose verbose))))
 
 (defun main/list (thing &key project dist)
   (cond ((string-equal thing "projects")
@@ -166,7 +170,8 @@ help                  Shows this help listing
             (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite)
                                                      :chars '(#\v :verbose #\u :update #\f :force
                                                               #\d :dist #\p :project #\n :version
-                                                              #\n :name #\t :type #\x :overwrite)))))
+                                                              #\n :name #\t :type #\x :overwrite
+                                                              #\j :jobs)))))
       (error (e)
         (format *error-output* "~&ERROR: ~a~%" e)
         (uiop:quit 2)))
