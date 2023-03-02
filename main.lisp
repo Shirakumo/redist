@@ -40,7 +40,7 @@ compile               Compile a dist release
                          if it exists already
   -x --overwrite         Overwrite the last release. Cannot be used
                          together with version. Implies --force
-  -j --jobs              Make the compilation threaded.
+  -j --jobs N            Make the compilation threaded.
 
 update                Update local project checkouts
   -v --version version   Specify the version to update to. If
@@ -82,14 +82,14 @@ help                  Shows this help listing
     (unless force (setf force T)))
   (let ((args (list* :if-exists :supersede :force force :update update :verbose verbose
                      (if version (list :version version)))))
-    (with-kernel (parse-integer jobs)
+    (with-kernel (when jobs (parse-integer jobs))
       (do-plist (dist (or (enlist dist) (list-dists)))
         (if overwrite
             (apply #'compile dist :version (version (first (releases dist))) args)
             (apply #'compile dist args))))))
 
 (defun main/update (&key version project verbose jobs)
-  (with-kernel (parse-integer jobs)
+  (with-kernel (when jobs (parse-integer jobs))
     (do-plist (project (or (enlist project) (list-projects)))
       (update project :version version :verbose verbose))))
 
