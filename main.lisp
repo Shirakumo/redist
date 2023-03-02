@@ -83,14 +83,14 @@ help                  Shows this help listing
   (let ((args (list* :if-exists :supersede :force force :update update :verbose verbose
                      (if version (list :version version)))))
     (with-kernel (when jobs (parse-integer jobs))
-      (do-plist (dist (or (enlist dist) (list-dists)))
+      (do-list* (dist (or (enlist dist) (list-dists)))
         (if overwrite
             (apply #'compile dist :version (version (first (releases dist))) args)
             (apply #'compile dist args))))))
 
 (defun main/update (&key version project verbose jobs)
   (with-kernel (when jobs (parse-integer jobs))
-    (do-plist (project (or (enlist project) (list-projects)))
+    (do-list* (project (or (enlist project) (list-projects)))
       (update project :version version :verbose verbose))))
 
 (defun main/list (thing &key project dist)
@@ -162,16 +162,19 @@ help                  Shows this help listing
 (defun main (&optional (args (uiop:command-line-arguments)))
   (let ((args (or args '("help"))))
     (handler-case
-        (destructuring-bind (command . args) args
-          (let ((cmdfun (find-symbol (format NIL "~a/~:@(~a~)" 'main command) #.*package*)))
-            (unless cmdfun
-              (error "No command named ~s." command))
-            (restore)
-            (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite)
-                                                     :chars '(#\v :verbose #\u :update #\f :force
-                                                              #\d :dist #\p :project #\n :version
-                                                              #\n :name #\t :type #\x :overwrite
-                                                              #\j :jobs)))))
+        (handler-bind ((error (lambda (e)
+                                (when (uiop:getenv "REDIST_DEBUG")
+                                  (invoke-debugger e)))))
+          (destructuring-bind (command . args) args
+            (let ((cmdfun (find-symbol (format NIL "~a/~:@(~a~)" 'main command) #.*package*)))
+              (unless cmdfun
+                (error "No command named ~s." command))
+              (restore)
+              (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite)
+                                                       :chars '(#\v :verbose #\u :update #\f :force
+                                                                #\d :dist #\p :project #\n :version
+                                                                #\n :name #\t :type #\x :overwrite
+                                                                #\j :jobs))))))
       (error (e)
         (format *error-output* "~&ERROR: ~a~%" e)
         (uiop:quit 2)))
