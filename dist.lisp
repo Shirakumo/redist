@@ -448,8 +448,9 @@
   (when (slot-boundp release 'source-files)
     (loop for cons on (source-files release)
           for path = (car cons)
-          do (unless (pathname-utils:absolute-p path)
-               (setf (car cons) (merge-pathnames path (source-directory (project release))))))))
+          do (multiple-value-bind (absolute-p path) (pathname-utils:absolute-p path)
+               (unless absolute-p
+                 (setf (car cons) (merge-pathnames path (source-directory (project release)))))))))
 
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
@@ -519,8 +520,9 @@
 
 (defmethod shared-initialize :after ((system system) slots &key (dependencies NIL dependencies-p))
   (when dependencies-p (setf (dependencies system) dependencies))
-  (unless (pathname-utils:absolute-p (file system))
-    (setf (file system) (merge-pathnames (file system) (source-directory (project (project system)))))))
+  (multiple-value-bind (absolute-p path) (pathname-utils:absolute-p (file system))
+    (unless absolute-p
+      (setf (file system) (merge-pathnames path (source-directory (project (project system))))))))
 
 (defmethod (setf dependencies) :around ((dependencies cons) (system system))
   (call-next-method (delete-duplicates (sort (remove-if #'implementation-specific-dependency-p dependencies) #'string<) :test #'string=) system))
