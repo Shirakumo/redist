@@ -94,14 +94,15 @@
 
 (defmethod serialize append ((release project-release))
   (list (version release)
-        :source-files (source-files release)
+        :source-files (loop for path in (source-files release)
+                            collect (enough-namestring path (source-directory (project release))))
         :source-sha1 (source-sha1 release)
         :archive-md5 (archive-md5 release)
         :systems (mapcar #'serialize (systems release))))
 
 (defmethod serialize append ((system system))
   (list (name system)
-        :file (file system)
+        :file (enough-namestring (file system) (source-directory (project (project system))))
         :dependencies (dependencies system)))
 
 (defmethod serialize append ((manager source-manager))

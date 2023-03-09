@@ -208,11 +208,11 @@
    (version-cache :initform NIL :accessor version-cache)))
 
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory)
-  (when releases-p (setf (releases project) releases))
-  (when sources-p (setf (sources project) sources))
   (when source-directory (setf (source-directory project) (uiop:truenamize source-directory)))
   (unless (slot-boundp project 'source-directory)
     (setf (source-directory project) (pathname-utils:subdirectory *default-source-directory* (name project))))
+  (when releases-p (setf (releases project) releases))
+  (when sources-p (setf (sources project) sources))
   (when (and (sources project)
              (not (disabled-p project))
              (or (not (probe-file (source-directory project)))
@@ -444,7 +444,12 @@
   (pushnew release (releases (project release))))
 
 (defmethod shared-initialize :after ((release project-release) slot &key (systems NIL systems-p))
-  (when systems-p (setf (systems release) systems)))
+  (when systems-p (setf (systems release) systems))
+  (when (slot-boundp release 'source-files)
+    (loop for cons on (source-files release)
+          for path = (car cons)
+          do (unless (pathname-utils:absolute-p path)
+               (setf (car cons) (merge-pathnames path (source-directory (project release))))))))
 
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
@@ -513,7 +518,9 @@
    (dependencies :initarg :dependencies :initform (arg! :dependencies) :accessor dependencies)))
 
 (defmethod shared-initialize :after ((system system) slots &key (dependencies NIL dependencies-p))
-  (when dependencies-p (setf (dependencies system) dependencies)))
+  (when dependencies-p (setf (dependencies system) dependencies))
+  (unless (pathname-utils:absolute-p (file system))
+    (setf (file system) (merge-pathnames (file system) (source-directory (project (project system)))))))
 
 (defmethod (setf dependencies) :around ((dependencies cons) (system system))
   (call-next-method (delete-duplicates (sort (remove-if #'implementation-specific-dependency-p dependencies) #'string<) :test #'string=) system))
