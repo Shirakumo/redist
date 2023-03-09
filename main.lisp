@@ -6,6 +6,15 @@
 
 (in-package #:org.shirakumo.redist)
 
+(defun envvar (var)
+  (let ((val (uiop:getenv var)))
+    (when (and val (string/= "" val))
+      val)))
+
+(defmacro with-envvar ((val var) &body body)
+  `(let ((,val (envvar ,var)))
+     (when ,val ,@body)))
+
 (defun create-update-script (&key (file (merge-pathnames "redist.lisp" *distinfo-file*)) (if-exists :supersede))
   (ensure-directories-exist file)
   (with-open-file (stream file :direction :output :if-exists if-exists)
@@ -170,6 +179,8 @@ help                  Shows this help listing
             (let ((cmdfun (find-symbol (format NIL "~a/~:@(~a~)" 'main command) #.*package*)))
               (unless cmdfun
                 (error "No command named ~s." command))
+              (with-envvar (val "DIST_SOURCE_DIR")
+                (setf *default-source-directory* (pathname-utils:parse-native-namestring val :as :directory)))
               (restore)
               (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite)
                                                        :chars '(#\v :verbose #\u :update #\f :force
