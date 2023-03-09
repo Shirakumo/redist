@@ -6,9 +6,17 @@
 
 (in-package #:org.shirakumo.redist)
 
-(defvar *distinfo-file* (merge-pathnames "../distinfo.lisp" *default-source-directory*))
+(defvar *distinfo-file* NIL)
 (defvar *dists* (make-hash-table :test 'eql))
 (defvar *projects* (make-hash-table :test 'equalp))
+
+(defun distinfo-file ()
+  (or *distinfo-file*
+      (when *default-source-directory*
+        (merge-pathnames "../distinfo.lisp" *default-source-directory*))
+      (when *default-output-directory*
+        (merge-pathnames "../distinfo.lisp" *default-output-directory*))
+      (merge-pathnames "dist/distinfo.lisp" (user-homedir-pathname))))
 
 (defmethod dist ((name symbol))
   (gethash name *dists*))
@@ -108,7 +116,7 @@
 (defmethod serialize append ((manager source-manager))
   (list (type-of manager) (url manager)))
 
-(defun persist (&key (file *distinfo-file*) (if-exists :supersede))
+(defun persist (&key (file (distinfo-file)) (if-exists :supersede))
   (ensure-directories-exist file)
   (with-open-file (stream file :direction :output :if-exists if-exists)
     (with-standard-io-syntax
@@ -127,7 +135,7 @@
               do (pprint (serialize dist) stream))
         (terpri stream)))))
 
-(defun restore (&key (file *distinfo-file*) (if-does-not-exist :error))
+(defun restore (&key (file (distinfo-file)) (if-does-not-exist :error))
   (with-standard-io-syntax
     (let ((*package* #.*package*))
       (load file :if-does-not-exist if-does-not-exist))))

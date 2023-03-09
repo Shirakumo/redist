@@ -29,9 +29,12 @@
         (format stream "~&# |#~%~%")
         (format stream "~&#-quicklisp (load ~s)~%" (ql-impl-util::quicklisp-init-file-form))
         (format stream "~&(ql:quickload :redist :silent T)~%~%")
-        (format stream "~&(setf org.shirakumo.redist:*distinfo-file* ~s)~%" *distinfo-file*)
-        (format stream "~&(setf org.shirakumo.redist:*default-output-directory* ~s)~%" *default-output-directory*)
-        (format stream "~&(setf org.shirakumo.redist:*default-source-directory* ~s)~%" *default-source-directory*)
+        (when *distinfo-file*
+          (format stream "~&(setf org.shirakumo.redist:*distinfo-file* ~s)~%" *distinfo-file*))
+        (when *default-output-directory*
+          (format stream "~&(setf org.shirakumo.redist:*default-output-directory* ~s)~%" *default-output-directory*))
+        (when *default-source-directory*
+          (format stream "~&(setf org.shirakumo.redist:*default-source-directory* ~s)~%" *default-source-directory*))
         (format stream "~&(org.shirakumo.redist:main)~%"))))
   file)
 
@@ -181,6 +184,10 @@ help                  Shows this help listing
                 (error "No command named ~s." command))
               (with-envvar (val "DIST_SOURCE_DIR")
                 (setf *default-source-directory* (pathname-utils:parse-native-namestring val :as :directory)))
+              (with-envvar (val "DIST_OUTPUT_DIR")
+                (setf *default-output-directory* (pathname-utils:parse-native-namestring val :as :directory)))
+              (with-envvar (val "DISTINFO_FILE")
+                (setf *distinfo-file* (pathname-utils:parse-native-namestring val :as :file)))
               (restore)
               (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite)
                                                        :chars '(#\v :verbose #\u :update #\f :force

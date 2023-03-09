@@ -6,7 +6,11 @@
 
 (in-package #:org.shirakumo.redist)
 
-(defvar *default-output-directory* #p "~/dist/releases/")
+(defvar *default-output-directory* NIL)
+
+(defun default-output-directory ()
+  (or *default-output-directory*
+      (make-pathname :name NIL :type NIL :defaults (merge-pathnames "releases/" (distinfo-file)))))
 
 (defun write-dist-index (release stream)
   (format stream "name: ~(~a~)

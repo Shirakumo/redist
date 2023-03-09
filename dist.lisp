@@ -6,7 +6,7 @@
 
 (in-package #:org.shirakumo.redist)
 
-(defvar *default-source-directory* #p "~/dist/sources/")
+(defvar *default-source-directory* NIL)
 (defvar *excluded-paths* '(#p".git/"
                            #p".github/"
                            #p".gitignore"
@@ -32,6 +32,10 @@
                            #p"_build/"
                            #p"ext/rt/"
                            #p"asd-generator-data.asd"))
+
+(defun default-source-directory ()
+  (or *default-source-directory*
+      (make-pathname :name NIL :type NIL :defaults (merge-pathnames "sources/" (distinfo-file)))))
 
 (defgeneric make-release (thing &key))
 (defgeneric find-project (name dist))
@@ -210,7 +214,7 @@
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory)
   (when source-directory (setf (source-directory project) (uiop:truenamize source-directory)))
   (unless (slot-boundp project 'source-directory)
-    (setf (source-directory project) (pathname-utils:subdirectory *default-source-directory* (name project))))
+    (setf (source-directory project) (pathname-utils:subdirectory (default-source-directory) (name project))))
   (when releases-p (setf (releases project) releases))
   (when sources-p (setf (sources project) sources))
   (when (and (sources project)
