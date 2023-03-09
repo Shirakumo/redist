@@ -8,6 +8,12 @@
 
 (defvar *global-file-dependencies*)
 
+(defstruct reader-expression (expr))
+
+(defmethod print-object ((expr reader-expression) stream)
+  (print-unreadable-object (expr stream :type T)
+    (format stream "~s" (reader-expression-expr expr))))
+
 (defmethod eclector.reader:interpret-symbol ((client (eql 'reader)) in package symbol intern)
   (handler-case (call-next-method)
     ((or
@@ -20,7 +26,7 @@
   (or (name-char name) (code-char #xFFFD)))
 
 (defmethod eclector.reader:evaluate-expression ((client (eql 'reader)) expr)
-  NIL)
+  (make-reader-expression :expr expr))
 
 (defun maybe-unquote (thing)
   (if (and (consp thing) (eql 'quote (first thing)))
@@ -92,15 +98,22 @@
     deps))
 
 (defun find-file-systems (file)
-  (with-open-file (stream file)
-    (let ((*package* (find-package :asdf/user))
-          (*global-file-dependencies* ())
-          (eclector.reader:*client* 'reader)
-          (acc (cons NIL NIL)))
-      (loop for form = (eclector.reader:read stream NIL #1='#:eof)
-            until (eq form #1#)
-            do (walk form acc))
-      (cdr acc))))
+  (etypecase file
+    (string
+     (with-input-from-string (stream file)
+       (find-file-systems stream)))
+    (pathname
+     (with-open-file (stream file)
+       (find-file-systems stream)))
+    (stream
+     (let ((*package* (find-package :asdf/user))
+           (*global-file-dependencies* ())
+           (eclector.reader:*client* 'reader)
+           (acc (cons NIL NIL)))
+       (loop for form = (eclector.reader:read file NIL #1='#:eof)
+             until (eq form #1#)
+             do (walk form acc))
+       (cdr acc)))))
 
 (defun find-asd-files (root)
   (directory (merge-pathnames (make-pathname :name :wild :type "asd" :directory '(:relative :wild-inferiors))
