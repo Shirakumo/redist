@@ -92,17 +92,13 @@
 (defmethod version ((manager git))
   (run-string "git" "rev-parse" "HEAD"))
 
-(defclass http (source-manager)
-  ())
-
-(defmethod clone ((manager http) &key version)
-  (declare (ignore version))
-  (let* ((name (subseq (url manager) (1+ (position #\/ (url manager) :from-end T))))
+(defun download-source (url)
+  (let* ((name (subseq url (1+ (position #\/ url :from-end T))))
          (temp (tempfile)))
     ;; Might as well use these, since we already need all the other binary utilities...
     (unwind-protect
          (progn
-           (run "curl" "-L" "-o" (uiop:native-namestring temp) (url manager))
+           (run "curl" "-L" "-o" (uiop:native-namestring temp) url)
            (cond ((or (ends-with ".tar.gz" name)
                       (ends-with ".tgz" name))
                   (run "tar" "-xf" (uiop:native-namestring temp) "-C" "."))
@@ -123,11 +119,18 @@
   :homepage ~s
   :source-control (:http ~:*~s)
   :components
-  ((:file ~s)))~%" name (url manager) name)))))
+  ((:file ~s)))~%" name url name)))))
                  (T
                   (error "Don't know how to deal with file ~a" name))))
       (when (probe-file temp)
         (delete-file temp)))))
+
+(defclass http (source-manager)
+  ())
+
+(defmethod clone ((manager http) &key version)
+  (declare (ignore version))
+  (download-source (url manager)))
 
 (defmethod update ((manager http) &rest args &key &allow-other-keys)
   (apply #'clone manager args))
@@ -176,3 +179,38 @@
                                            (run-string "curl" "--header" (format NIL "PRIVATE-TOKEN: ~a" (token manager)) url)
                                            (run-string "curl" url)))))
        (gethash "tag_name" (aref content 0))))))
+
+(defclass dist-source (source-manager)
+  ((project :initarg :project :initform (arg! :project) :accessor project)
+   (version :initform NIL :accessor version)))
+
+(defmethod clone ((manager dist-source) &key version)
+  (let* ((index (with-input-from-string (stream (run-string "curl" "-L" (url manager)))
+                  (read-dist-index stream)))
+         (versions (gethash "available-versions-url" index)))
+    (when (and version versions)
+      (let* ((versions (with-input-from-string (stream (run-string "curl" "-L" versions))
+                         (read-dist-releases-index stream))))
+        (unless (gethash version versions)
+          (error "The dist doesn't appear to have a version ~s" version))
+        (setf index (with-input-from-string (stream (run-string "curl" "-L" (url manager)))
+                      (read-dist-index stream)))))
+    (when (or (null (version manager)) (not (equal (version manager) (gethash "version" index))))
+      (let ((releases (gethash "release-index-url" index)))
+        (unless releases
+          (error "Doesn't appear to be a valid dist url."))
+        (let* ((releases (with-input-from-string (stream (run-string "curl" "-L" releases))
+                           (read-release-index stream)))
+               (project (gethash (project manager) releases)))
+          (unless project
+            (error "The dist doesn't appear to have a project named ~s" (project manager)))
+          (prog1 (download-source (getf project :url))
+            (setf (version manager) (gethash "version" index))))))))
+
+(defmethod update ((manager dist-source) &rest args &key &allow-other-keys)
+  (apply #'clone manager args))
+
+(defmethod serialize append ((manager dist-source))
+  (prune-plist
+   (list :project (project manager)
+         :version (version manager))))

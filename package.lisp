@@ -95,7 +95,8 @@
    #:git
    #:http
    #:github
-   #:gitlab)
+   #:gitlab
+   #:dist-source)
   ;; ql-support.lisp
   (:export
    #:parse-quicklisp-source

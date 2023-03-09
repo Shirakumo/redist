@@ -41,4 +41,5 @@
                :clip
                :form-fiddle
                :documentation-utils
-               :lparallel))
+               :lparallel
+               :cl-ppcre))

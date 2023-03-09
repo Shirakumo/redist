@@ -633,6 +633,14 @@ Accepts the additional options:
   :TOKEN -- The API token used to access the Gitlab API.
 
 See GIT (type)
+See SOURCE-MANAGER (type)")
+
+  (type dist-source
+    "Source manager for other quicklisp dists.
+
+Accepts the additional options:
+  :PROJECT -- The name of the project in the dist to track.
+
 See SOURCE-MANAGER (type)"))
 
 ;;; ql-support.lisp
