@@ -172,7 +172,7 @@ help                  Shows this help listing
                       (push arg pargs)))))
     (append (nreverse pargs) kargs)))
 
-(defun main (&optional (args (rest (uiop:command-line-arguments))))
+(defun main (&optional (args (uiop:command-line-arguments)))
   (let ((args (or args '("help"))))
     (handler-case
         (handler-bind ((error (lambda (e)
