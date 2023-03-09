@@ -17,7 +17,7 @@
                   ,@body)))
      ,result))
 
-(defun parse-quicklisp-projects (root &key (source-directory *default-source-directory*))
+(defun parse-quicklisp-projects (root &key (source-directory (default-source-directory)))
   (let ((excluded-systems (make-hash-table :test #'equalp))
         (excluded-paths ()))
     (do-quicklisp-file (line (merge-pathnames "qlc-meta/excluded-systems.txt" root))

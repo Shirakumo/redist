@@ -77,7 +77,7 @@ available-versions-url: ~a"
 (defmethod compile ((name symbol) &rest args &key &allow-other-keys)
   (apply #'compile (dist name) args))
 
-(defmethod compile ((dist dist) &rest args &key (version (next-version dist)) update verbose (projects NIL projects-p) (output *default-output-directory*) (if-exists :supersede) &allow-other-keys)
+(defmethod compile ((dist dist) &rest args &key (version (next-version dist)) update verbose (projects NIL projects-p) (output (default-output-directory)) (if-exists :supersede) &allow-other-keys)
   (remf args :update)
   (remf args :version)
   (remf args :projects)
@@ -110,7 +110,7 @@ available-versions-url: ~a"
         ;;        need to be careful to not remove files from shared releases
         (setf (releases dist) (remove release (releases dist)))))))
 
-(defmethod compile ((release release) &key (output *default-output-directory*) (if-exists :supersede) verbose force)
+(defmethod compile ((release release) &key (output (default-output-directory)) (if-exists :supersede) verbose force)
   (when verbose
     (verbose "Compiling release ~a" (version release)))
   (ensure-directories-exist output)
@@ -134,7 +134,7 @@ available-versions-url: ~a"
     (generate-html (f (dist-path release)) "index" "release" :release release)
     release))
 
-(defmethod compile ((release project-release) &key (output *default-output-directory*) (if-exists :supersede) verbose force)
+(defmethod compile ((release project-release) &key (output (default-output-directory)) (if-exists :supersede) verbose force)
   (let ((target (merge-pathnames (path release) output)))
     (when (or force (not (probe-file target)))
       (when verbose
