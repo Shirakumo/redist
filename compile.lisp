@@ -12,6 +12,14 @@
   (or *default-output-directory*
       (make-pathname :name NIL :type NIL :defaults (merge-pathnames "releases/" (distinfo-file)))))
 
+(defun read-dist-index (stream)
+  (let ((table (make-hash-table :test 'equal)))
+    (loop for line = (read-line stream NIL NIL)
+          while line
+          do (cl-ppcre:register-groups-bind (key val) ("^\\s*([^#][^:]*):\\s*(.*?)\\s*$" line)
+               (setf (gethash (string-downcase key) table) val)))
+    table))
+
 (defun write-dist-index (release stream)
   (format stream "name: ~(~a~)
 version: ~a
@@ -30,9 +38,33 @@ available-versions-url: ~a"
           (dist-url (dist release))
           (releases-url (dist release))))
 
+(defun read-dist-releases-index (stream)
+  (let ((table (make-hash-table :test 'equal)))
+    (loop for line = (read-line stream NIL NIL)
+          while line
+          do (cl-ppcre:register-groups-bind (key val) ("^\\s*([^#][^ ]*) +(.*?)\\s*$" line)
+               (setf (gethash (string-downcase key) table) val)))
+    table))
+
 (defun write-dist-releases-index (dist stream)
   (dolist (release (releases dist))
     (format stream "~a ~a~%" (version release) (dist-url release))))
+
+(defun read-release-index (stream)
+  (let ((table (make-hash-table :test 'equal)))
+    (loop for line = (read-line stream NIL NIL)
+          while line
+          do (cl-ppcre:register-groups-bind (pure) ("^\\s*([^#].*?)\\s*$" line)
+               (destructuring-bind (project url size md5 sha1 prefix &rest systems) (cl-ppcre:split "\\s+" pure)
+                 (setf (gethash (string-downcase project) table)
+                       (list :name project
+                             :url url
+                             :file-size size
+                             :archive-md5 md5
+                             :source-sha1 sha1
+                             :prefix prefix
+                             :systems systems)))))
+    table))
 
 (defun write-release-index (release output stream)
   (format stream "# project url size file-md5 content-sha1 prefix [system-file1...system-fileN]~%")
@@ -48,6 +80,19 @@ available-versions-url: ~a"
               (remove-duplicates (loop for system in (systems project) collect (enough-namestring (file system)
                                                                                                   (source-directory (project project))))
                                  :test #'string=)))))
+
+(defun read-system-index (stream)
+  (let ((table (make-hash-table :test 'equal)))
+    (loop for line = (read-line stream NIL NIL)
+          while line
+          do (cl-ppcre:register-groups-bind (pure) ("^\\s*([^#].*?)\\s*$" line)
+               (destructuring-bind (project system-file system-name &rest dependencies) (cl-ppcre:split "\\s+" pure)
+                 (push (list :project project
+                             :file system-file
+                             :name system-name
+                             :dependencies dependencies)
+                       (gethash (string-downcase project) table)))))
+    table))
 
 (defun write-system-index (release stream)
   (format stream "# project system-file system-name [dependency1..dependencyN]~%")
