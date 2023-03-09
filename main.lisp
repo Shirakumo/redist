@@ -15,14 +15,15 @@
             (*print-right-margin* 80)
             (*print-readably* NIL))
         (format stream "~&#| Dist update script compiled automatically~%")
-        (format stream "~&~a --noinform --load \"$0\" -- \"$@\"; exit~%" (first (uiop:raw-command-line-arguments)))
+        (format stream "~&exec ~a --noinform --load \"$0\" -- \"$@\"; exit~%"
+                (pathname-utils:native-namestring (truename (first (uiop:raw-command-line-arguments)))))
         (format stream "~&# |#~%~%")
         (format stream "~&#-quicklisp (load ~s)~%" (ql-impl-util::quicklisp-init-file-form))
         (format stream "~&(ql:quickload :redist :silent T)~%~%")
         (format stream "~&(setf org.shirakumo.redist:*distinfo-file* ~s)~%" *distinfo-file*)
         (format stream "~&(setf org.shirakumo.redist:*default-output-directory* ~s)~%" *default-output-directory*)
         (format stream "~&(setf org.shirakumo.redist:*default-source-directory* ~s)~%" *default-source-directory*)
-        (format stream "~&(org.shirakumo.redist:main (rest (uiop:command-line-arguments)))~%"))))
+        (format stream "~&(org.shirakumo.redist:main)~%"))))
   file)
 
 (defun main/help ()
@@ -159,7 +160,7 @@ help                  Shows this help listing
                       (push arg pargs)))))
     (append (nreverse pargs) kargs)))
 
-(defun main (&optional (args (uiop:command-line-arguments)))
+(defun main (&optional (args (rest (uiop:command-line-arguments))))
   (let ((args (or args '("help"))))
     (handler-case
         (handler-bind ((error (lambda (e)
