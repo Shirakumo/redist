@@ -51,14 +51,19 @@
                        (gethash (string-downcase project) table)))))
     table))
 
-(defun replicate-dist (disturl &key name (verbose T) (download-archives T))
+(defun available-versions-url (distinfo)
+  (or (gethash "available-versions-url" distinfo)
+      (cl-ppcre:register-groups-bind (base ext) ("^(.*?)(\\.[^.]+)?$" (gethash "distinfo-subscription-url" distinfo))
+        (format NIL "~a-versions~@[~a~]" base ext))))
+
+(defun replicate-dist (disturl &key name (verbose T) (download-archives T) current-version-only)
   (let* ((distinfo (fetch disturl #'read-dist-index verbose))
          (name (or name (gethash "name" distinfo)))
          (dist (ensure-instance (dist name) 'dist :name name :url (gethash "archive-base-url" distinfo))))
-    (if (gethash "available-versions-url" distinfo)
-        (loop for url being the hash-values of (fetch (gethash "available-versions-url" distinfo) #'read-dist-releases-index verbose)
-              do (replicate-dist-version dist url :verbose verbose :disturl disturl :download-archives download-archives))
-        (replicate-dist-version dist disturl :verbose verbose :disturl disturl :download-archives download-archives))
+    (if current-version-only
+        (replicate-dist-version dist disturl :verbose verbose :disturl disturl :download-archives download-archives)
+        (loop for url being the hash-values of (fetch (available-versions-url "available-versions-url") #'read-dist-releases-index verbose)
+              do (replicate-dist-version dist url :verbose verbose :disturl disturl :download-archives download-archives)))
     (setf (dist name) dist)))
 
 (defun replicate-dist-version (dist url &key (verbose T) disturl (download-archives T))
