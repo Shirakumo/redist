@@ -56,7 +56,7 @@
                                      (asdf:system-relative-pathname :redist "schema.sql"))))
       (query_ statement))))
 
-(defun restore-sqlite (&key (file (sqlite-file)) (if-does-not-exist :error))
+(defun restore-sqlite (&key (file (sqlite-file)) (if-does-not-exist :error) restore-source-files)
   ;; FIXME: add a "ignore if exists" option for releases
   (with-sqlite (file :if-does-not-exist if-does-not-exist)
     (do-select (id name source_directory disabled) ("FROM projects")
@@ -79,7 +79,8 @@
             (ensure-release (list version
                                   :archive-md5 archive_md5
                                   :source-sha1 source_sha1
-                                  :source-files (query1 "SELECT path FROM project_release_source_files WHERE project_release=?" id)
+                                  :source-files (when restore-source-files
+                                                  (query1 "SELECT path FROM project_release_source_files WHERE project_release=?" id))
                                   :systems systems)
                             project)))))
     (do-select (id name url) ("FROM dists")
