@@ -62,7 +62,7 @@
          (dist (ensure-instance (dist name) 'dist :name name :url (gethash "archive-base-url" distinfo))))
     (if current-version-only
         (replicate-dist-version dist disturl :verbose verbose :disturl disturl :download-archives download-archives)
-        (loop for url being the hash-values of (fetch (available-versions-url "available-versions-url") #'read-dist-releases-index verbose)
+        (loop for url being the hash-values of (fetch (available-versions-url distinfo) #'read-dist-releases-index verbose)
               do (replicate-dist-version dist url :verbose verbose :disturl disturl :download-archives download-archives)))
     (setf (dist name) dist)))
 
