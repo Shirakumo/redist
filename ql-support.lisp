@@ -17,7 +17,7 @@
                   ,@body)))
      ,result))
 
-(defun parse-quicklisp-projects (root &key (source-directory (default-source-directory)))
+(defun parse-quicklisp-projects (root &key (source-directory (default-source-directory)) (if-does-not-exist :create))
   (let ((excluded-systems (make-hash-table :test #'equalp))
         (excluded-paths ()))
     (do-quicklisp-file (line (merge-pathnames "qlc-meta/excluded-systems.txt" root))
@@ -30,11 +30,18 @@
     (loop for dir in (directory (merge-pathnames "projects/*/" root))
           for name = (pathname-utils:directory-name dir)
           for sources = (parse-quicklisp-source-file (merge-pathnames "source.txt" dir))
-          do (setf (project name) (ensure-instance (project name) 'project
-                                                   :name name
-                                                   :sources sources
-                                                   :source-directory (merge-pathnames (make-pathname :directory (list :relative name)) source-directory)
-                                                   :excluded-systems (gethash name excluded-systems))))))
+          for project = (project name)
+          do (unless project
+               (ecase if-does-not-exist
+                 (:create)
+                 (:error (error "No project named ~s" name))
+                 (:ignore (setf project :ignore))))
+             (unless (eql :ignore project)
+               (setf (project name) (ensure-instance project 'project
+                                                     :name name
+                                                     :sources sources
+                                                     :source-directory (merge-pathnames (make-pathname :directory (list :relative name)) source-directory)
+                                                     :excluded-systems (gethash name excluded-systems)))))))
 
 (defun parse-quicklisp-source-file (file)
   (let ((managers ()))
