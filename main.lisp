@@ -188,7 +188,11 @@ help                  Shows this help listing
                 (setf *default-output-directory* (pathname-utils:parse-native-namestring val :as :directory)))
               (with-envvar (val "DISTINFO_FILE")
                 (setf *distinfo-file* (pathname-utils:parse-native-namestring val :as :file)))
-              (restore)
+              (with-envvar (val "DIST_DATABASE")
+                (setf *sqlite-file* (pathname-utils:parse-native-namestring val :as :file)))
+              (restore :if-does-not-exist NIL)
+              (when (ignore-errors (cffi:load-foreign-library 'sqlite-ffi::sqlite3-lib))
+                (restore-sqlite :if-does-not-exist NIL))
               (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite)
                                                        :chars '(#\v :verbose #\u :update #\f :force
                                                                 #\d :dist #\p :project #\n :version
@@ -197,5 +201,15 @@ help                  Shows this help listing
       (error (e)
         (format *error-output* "~&ERROR: ~a~%" e)
         (uiop:quit 2)))
-    (persist)
+    (cond ((probe-file *sqlite-file*)
+           (persist-sqlite))
+          ((probe-file *distinfo-file*)
+           (persist))
+          ((ignore-errors (cffi:load-foreign-library 'sqlite-ffi::sqlite3-lib))
+           (persist-sqlite))
+          (T
+           (persist)))
     (uiop:quit)))
+
+;; Sigh.
+(cffi:close-foreign-library 'sqlite-ffi::sqlite3-lib)

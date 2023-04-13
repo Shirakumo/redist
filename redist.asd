@@ -22,6 +22,7 @@
                (:file "asdf")
                (:file "dist")
                (:file "persistence")
+               (:file "sqlite")
                (:file "sources")
                (:file "ql-support")
                (:file "compile")
@@ -42,4 +43,5 @@
                :form-fiddle
                :documentation-utils
                :lparallel
-               :cl-ppcre))
+               :cl-ppcre
+               :sqlite))
