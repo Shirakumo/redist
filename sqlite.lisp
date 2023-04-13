@@ -86,7 +86,7 @@
     (do-select (id name url) ("FROM dists")
       (let ((dist (ensure-instance (dist name) 'dist 
                                    :name name :url url
-                                   :projects (query1 "SELECT a.name FROM projects AS a INNER JOIN dist_projects AS b ON a.ID = b.project WHERE b.ID = ?" id)
+                                   :projects (query1 "SELECT p.name FROM projects AS p INNER JOIN dist_projects AS dp ON p.ID = dp.project WHERE dp.dist = ?" id)
                                    :excluded-paths (query1 "SELECT path FROM dist_excluded_paths WHERE dist=?" id))))
         (setf (dist (name dist)) dist)
         (do-select (id version timestamp) ("FROM dist_releases WHERE dist=?" id)
