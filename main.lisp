@@ -205,7 +205,7 @@ help                  Shows this help listing
            (persist-sqlite))
           ((probe-file *distinfo-file*)
            (persist))
-          ((ignore-errors (cffi:load-foreign-library 'sqlite-ffi::sqlite3-lib))
+          ((cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
            (persist-sqlite))
           (T
            (persist)))

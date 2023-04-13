@@ -75,6 +75,9 @@
               while i
               thereis (progn (incf i) (starts-with string file :start2 i))))))
 
+(defun empty-directory-p (dir)
+  (null (filesystem-utils:list-contents dir)))
+
 (defun gather-sources (base &optional exclude)
   (let ((base (truename base)))
     (loop for file in (directory (merge-pathnames (make-pathname :name :wild :type :wild :directory '(:relative :wild-inferiors)) base))
@@ -91,18 +94,6 @@
          (apply #'reinitialize-instance instance initargs))
         (T
          (apply #'change-class instance type initargs))))
-
-(defun split (split string)
-  (let ((parts ()) (buffer (make-string-output-stream)))
-    (flet ((maybe-output ()
-             (let ((part (get-output-stream-string buffer)))
-               (when (string/= part "") (push part parts)))))
-      (loop for char across string
-            do (if (char= char split)
-                   (maybe-output)
-                   (write-char char buffer))
-            finally (maybe-output))
-      (nreverse parts))))
 
 (defun ends-with (end string)
   (and (<= (length end) (length string))

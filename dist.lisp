@@ -61,7 +61,7 @@
    (url :initarg :url :initform (arg! :url) :accessor url)
    (projects :initform () :accessor projects)
    (releases :initform () :accessor releases)
-   (excluded-paths :initarg :excluded-paths :initform () :accessor excluded-paths)))
+   (excluded-paths :initarg excluded-paths :initform () :accessor excluded-paths)))
 
 (defmethod shared-initialize :after ((dist dist) slots &key (projects NIL projects-p) (releases NIL releases-p))
   (when projects-p (setf (projects dist) projects))
@@ -225,7 +225,8 @@
   (when (and (sources project)
              (not (disabled-p project))
              (or (not (probe-file (source-directory project)))
-                 (null (directory (merge-pathnames pathname-utils:*wild-path* (source-directory project))))))
+                 (empty-directory-p (source-directory project))))
+    (break)
     (restart-case (clone project :verbose verbose)
       (disable ()
         :report "Disable the project"
@@ -355,7 +356,7 @@
   ((dist :initarg :dist :initform (arg! :dist) :accessor dist)
    (version :initarg :version :initform (arg! :version) :accessor version)
    (timestamp :initarg :timestamp :initform (get-universal-time) :accessor timestamp)
-   (projects :accessor projects)))
+   (projects :initform () :accessor projects)))
 
 (defmethod shared-initialize :after ((release release) slots &key (projects NIL projects-p))
   (when projects-p (setf (projects release) projects)))
@@ -383,22 +384,12 @@
   (make-release project :release release))
 
 (defmethod ensure-project-release ((spec cons) (release release))
-  (destructuring-bind (project &rest initargs) spec
+  (destructuring-bind (project &rest initargs &key version &allow-other-keys) spec
     (let ((project (or (find-project project (dist release))
                        (error "No project named~%  ~s~%present on dist ~s!"
-                              project (dist release))))
-          (systems (getf initargs :systems))
-          (version (getf initargs :version)))
-      (remf initargs :systems)
+                              project (dist release)))))
       (remf initargs :version)
-      (if (equal version (version release))
-          (ensure-instance (find-project project release)
-                           'project-release
-                           (list* :project project
-                                  :systems (loop for (name . args) in systems
-                                                 collect (apply #'make-instance 'system :project project :name name args))
-                                  initargs))
-          (find-release version project)))))
+      (ensure-release (list* version initargs) project))))
 
 (defmethod find-project ((project project) (release release))
   (find project (projects release) :key #'project))

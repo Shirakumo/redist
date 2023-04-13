@@ -21,7 +21,7 @@
   (let ((excluded-systems (make-hash-table :test #'equalp))
         (excluded-paths ()))
     (do-quicklisp-file (line (merge-pathnames "qlc-meta/excluded-systems.txt" root))
-      (destructuring-bind (project &rest systems) (split #\  line)
+      (destructuring-bind (project &rest systems) (cl-ppcre:split " +" line)
         (dolist (system systems) (push system (gethash project excluded-systems)))))
     (do-quicklisp-file (line (merge-pathnames "qlc-meta/excluded-system-pathnames.txt" root))
       (if (char= #\/ (char line 0))
@@ -39,7 +39,7 @@
 (defun parse-quicklisp-source-file (file)
   (let ((managers ()))
     (do-quicklisp-file (line file managers)
-      (destructuring-bind (type &rest args) (split #\  line)
+      (destructuring-bind (type &rest args) (cl-ppcre:split " +" line)
         (let ((manager (parse-quicklisp-source (intern (string-upcase type) #.*package*) args)))
           (when manager (push manager managers)))))))
 

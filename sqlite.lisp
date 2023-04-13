@@ -19,15 +19,19 @@
 
 (defun call-with-sqlite (function file &key (if-does-not-exist :create))
   (cond (*sqlite*
-         (funcall function))
+         (sqlite:with-transaction *sqlite*
+           (funcall function)))
         (T
          (unless (probe-file file)
            (ecase if-does-not-exist
              (:error (error "Sqlite database file~%  ~a~%does not exist." file))
              (:create)
              ((NIL) (return-from call-with-sqlite NIL))))
+         (unless (cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
+           (cffi:load-foreign-library 'sqlite-ffi::sqlite3-lib))
          (sqlite:with-open-database (*sqlite* file)
-           (funcall function)))))
+           (sqlite:with-transaction *sqlite*
+             (funcall function))))))
 
 (defmacro with-sqlite ((file &rest args) &body body)
   (let ((thunk (gensym "THUNK")))
@@ -46,10 +50,10 @@
   `(loop for ,vars in (query ,(format NIL "SELECT ~{~a~^,~} ~a" vars query) ,@args)
          do (progn ,@body)))
 
-(defun sqlite-init (&key (file (sqlite-file)) (if-does-not-exist :create))
+(defun init-sqlite (&key (file (sqlite-file)) (if-does-not-exist :create))
   (with-sqlite (file :if-does-not-exist if-does-not-exist)
-    (dolist (statement (split #\; #.(alexandria:read-file-into-string
-                                     (merge-pathnames "schema.sql" *compile-file-pathname*))))
+    (dolist (statement (cl-ppcre:split "\\s*;\\s*" #.(alexandria:read-file-into-string
+                                     (asdf:system-relative-pathname :redist "schema.sql"))))
       (query_ statement))))
 
 (defun restore-sqlite (&key (file (sqlite-file)) (if-does-not-exist :error))
@@ -62,16 +66,17 @@
           (push (list* type url (read-from-string initargs))
                 sources))
         (ensure-instance project 'project
-                         :disabled-p disabled
+                         :disabled-p (< 0 disabled)
                          :excluded-systems (query1 "SELECT system FROM project_excluded_systems WHERE project=?" id)
                          :excluded-paths (query1 "SELECT path FROM project_excluded_paths WHERE project=?" id)
                          :sources sources)
+        (setf (project (name project)) project)
         (do-select (id version archive_md5 source_sha1) ("FROM project_releases WHERE project=?" id)
           (let ((systems ()))
             (do-select (id name file) ("FROM project_release_systems WHERE project_release=?" id)
-              (push (list name :file file :dependencies (query1 "SELECT path FROM project_release_system_dependencies WHERE system=?" id))
+              (push (list name :file file :dependencies (query1 "SELECT dependency FROM project_release_system_dependencies WHERE system=?" id))
                     systems))
-            (ensure-release (list :version version
+            (ensure-release (list version
                                   :archive-md5 archive_md5
                                   :source-sha1 source_sha1
                                   :source-files (query1 "SELECT path FROM project_release_source_files WHERE project_release=?" id)
@@ -82,6 +87,7 @@
                                    :name name :url url
                                    :projects (query1 "SELECT a.name FROM projects AS a INNER JOIN dist_projects AS b ON a.ID = b.project WHERE b.ID = ?" id)
                                    :excluded-paths (query1 "SELECT path FROM dist_excluded_paths WHERE dist=?" id))))
+        (setf (dist (name dist)) dist)
         (do-select (id version timestamp) ("FROM dist_releases WHERE dist=?" id)
           (ensure-release (list version
                                 :timestamp timestamp
@@ -93,14 +99,14 @@
                           dist))))))
 
 (defun update-sqlite (table ids values &key (if-exists :update))
-  (let ((id (first (apply #'sqlite:execute-single *sqlite* (format NIL "SELECT ID FROM ~a WHERE ~{~a=?~^ AND ~}" table ids)
-                          (loop for id in ids collect (getf values id))))))
+  (let ((id (apply #'sqlite:execute-single *sqlite* (format NIL "SELECT ID FROM ~a WHERE ~{~a=?~^ AND ~}" table ids)
+                   (loop for id in ids collect (getf values id)))))
     (cond ((null id)
-           (apply #'sqlite:execute-non-query (format NIL "INSERT INTO ~a(~{~a~*~^, ~}) ~:* VALUES(~{?~*~*~^, ~})" table values)
+           (apply #'sqlite:execute-non-query *sqlite* (format NIL "INSERT INTO ~a(~{~a~*~^, ~}) ~:* VALUES(~{?~*~*~^, ~})" table values)
                   (loop for (k v) on values by #'cddr collect v))
            (sqlite:last-insert-rowid *sqlite*))
           ((eql :update if-exists)
-           (apply #'sqlite:execute-non-query (format NIL "UPDATE ~a SET ~{~a=?~*~^, ~} WHERE ID=?" table values)
+           (apply #'sqlite:execute-non-query *sqlite* (format NIL "UPDATE ~a SET ~{~a=?~*~^, ~} WHERE ID=?" table values)
                   (append (loop for (k v) on values by #'cddr collect v) (list id)))
            id)
           ((eql :error if-exists)
@@ -124,15 +130,15 @@
       (loop for project in (list-projects)
             for id = (update "projects" '(:name)
                              :name (name project)
-                             :source_directory (source-directory project)
-                             :disabled (disabled-p project))
+                             :source_directory (namestring (source-directory project))
+                             :disabled (if (disabled-p project) 1 0))
             do (query_ "DELETE FROM project_sources WHERE project=?" id)
                (dolist (source (sources project))
                  (destructuring-bind (type url . args) (serialize source)
                    (query_ "INSERT INTO project_sources(project,type,url,initargs) VALUES(?,?,?,?)"
                            id (string type) url (prin1-to-string args))))
                (refill "project_excluded_systems" :project id :system (excluded-systems project))
-               (refill "project_excluded_paths" :project id :path (excluded-paths project))
+               (refill "project_excluded_paths" :project id :path (mapcar #'namestring (excluded-paths project)))
                (loop for release in (releases project)
                      for rid = (insert "project_releases" '(:project :version)
                                        :project id
@@ -140,12 +146,12 @@
                                        :archive_md5 (archive-md5 release)
                                        :source_sha1 (source-sha1 release))
                      do (when rid
-                          (refill "project_release_source_files" :project_release rid :path (source-files release))
+                          (refill "project_release_source_files" :project_release rid :path (mapcar #'namestring (source-files release)))
                           (loop for system in (systems release)
                                 for sid = (insert "project_release_systems" '(:project_release :name)
                                                   :project_release rid
                                                   :name (name system)
-                                                  :file (file system))
+                                                  :file (namestring (file system)))
                                 do (when sid
                                      (refill "project_release_system_dependencies" :system sid :dependency (dependencies system)))))))
       (loop for dist in (list-dists)
@@ -155,8 +161,8 @@
             do (query_ "DELETE FROM dist_projects WHERE dist=?" id)
                (dolist (project (projects dist))
                  (query_ "INSERT INTO dist_projects(dist,project)
-                          (SELECT ?,ID FROM projects WHERE name=?)" id (name project)))
-               (refill "dist_excluded_paths" :dist id :path (excluded-paths dist))
+                          SELECT ?,ID FROM projects WHERE name=?" id (name project)))
+               (refill "dist_excluded_paths" :dist id :path (mapcar #'namestring (excluded-paths dist)))
                (loop for release in (releases dist)
                      for rid = (insert "dist_releases" '(:dist :version)
                                        :dist id
@@ -165,7 +171,7 @@
                      do (when rid
                           (dolist (project (projects release))
                             (query_ "INSERT INTO dist_release_projects(dist_release,project_release)
-                                     (SELECT ?,pr.ID FROM project_releases AS pr
+                                     SELECT ?,pr.ID FROM project_releases AS pr
                                                   INNER JOIN projects AS p ON pr.project = p.ID
                                                   WHERE pr.version = ? AND p.name = ?"
                                     rid (version project) (name (project project))))))))))

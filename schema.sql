@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS projects (
   ID integer PRIMARY KEY,
   name varchar(128) NOT NULL UNIQUE,
   source_directory text NOT NULL,
-  disabled boolean NOT NULL);
+  disabled integer NOT NULL);
 
 CREATE TABLE IF NOT EXISTS project_sources (
   ID integer PRIMARY KEY,
