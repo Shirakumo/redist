@@ -72,13 +72,14 @@
             (do-select (id name file) ("FROM project_release_systems WHERE project_release=?" id)
               (push (list name :file file :dependencies (query1 "SELECT dependency FROM project_release_system_dependencies WHERE system=?" id))
                     systems))
-            (ensure-release (list version
-                                  :archive-md5 archive_md5
-                                  :source-sha1 source_sha1
-                                  :source-files (when restore-source-files
-                                                  (query1 "SELECT path FROM project_release_source_files WHERE project_release=?" id))
-                                  :systems systems)
-                            project)))))
+            (pushnew (ensure-release (list version
+                                           :archive-md5 archive_md5
+                                           :source-sha1 source_sha1
+                                           :source-files (when restore-source-files
+                                                           (query1 "SELECT path FROM project_release_source_files WHERE project_release=?" id))
+                                           :systems systems)
+                                     project)
+                     (releases project))))))
     (do-select (id name url) ("FROM dists")
       (let ((dist (ensure-instance (dist name) 'dist
                                    :name name :url url
@@ -86,14 +87,15 @@
                                    :excluded-paths (query1 "SELECT path FROM dist_excluded_paths WHERE dist=?" id))))
         (setf (dist (name dist)) dist)
         (do-select (id version timestamp) ("FROM dist_releases WHERE dist=?" id)
-          (ensure-release (list version
-                                :timestamp timestamp
-                                :projects (loop for (name version) in (query "SELECT p.name,pr.version FROM projects AS p
+          (pushnew (ensure-release (list version
+                                         :timestamp timestamp
+                                         :projects (loop for (name version) in (query "SELECT p.name,pr.version FROM projects AS p
                                                                  INNER JOIN project_releases AS pr ON p.ID = pr.project
                                                                  INNER JOIN dist_release_projects AS dr ON pr.ID = dr.project_release 
                                                                  WHERE dr.dist_release = ?" id)
-                                                collect (find-release version (project name))))
-                          dist))))))
+                                                         collect (find-release version (project name))))
+                                   dist)
+                   (releases dist)))))))
 
 (defun update-sqlite (table ids values &key (if-exists :update))
   (let ((id (apply #'sqlite:execute-single *sqlite* (format NIL "SELECT ID FROM ~a WHERE ~{~a=?~^ AND ~}" table ids)
