@@ -142,6 +142,9 @@
   (when (releases dist)
     (version (first (releases dist)))))
 
+(defmethod list-versions ((dist dist))
+  (mapcar #'version (releases dist)))
+
 (defclass integer-versioned-dist (dist)
   ())
 
@@ -213,7 +216,7 @@
    (releases :initform () :accessor releases)
    (version-cache :initform NIL :accessor version-cache)))
 
-(defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory)
+(defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory (verbose T))
   (when source-directory (setf (source-directory project) (uiop:truenamize source-directory)))
   (unless (slot-boundp project 'source-directory)
     (setf (source-directory project) (pathname-utils:subdirectory (default-source-directory) (name project))))
@@ -223,8 +226,7 @@
              (not (disabled-p project))
              (or (not (probe-file (source-directory project)))
                  (null (directory (merge-pathnames pathname-utils:*wild-path* (source-directory project))))))
-    (restart-case
-        (clone project :verbose T)
+    (restart-case (clone project :verbose verbose)
       (disable ()
         :report "Disable the project"
         (setf (disabled-p project) T)))))
@@ -335,6 +337,9 @@
             (simple-inferiors:with-chdir ((source-directory project))
               (loop for source in (sources project)
                     thereis (ignore-errors (version source)))))))
+
+(defmethod list-versions ((project project))
+  (mapcar #'version (releases project)))
 
 (defmethod find-system (name (project project))
   (when (releases project)

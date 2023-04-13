@@ -62,3 +62,21 @@ Along with the actual dist files, Redist also generates a set of HTML. Specifica
 This should help people explore the stuff you host on your servers without having to actually install the dist. It also helps to have a more interactive way to search through versions.
 
 If you would like to customise how the pages look, please have a look at the files in the ``template/`` directory. The HTML pages are generated using "Clip"(https://shinmera.github.io/clip), and the CSS is generated using "LASS"(https://shinmera.github.io/LASS).
+
+## Programs
+The following programs should be accessible for some features of Redist to operate:
+
+- ``curl``
+  For sources hosted as bare archives and replicating dists
+- ``bsdtar``
+  For sources hosted as bare archives and replicating dists
+- ``git``
+  For sources hosted in Git repositories
+- ``hg``
+  For sources hosted in Mercurial repositories
+- ``darcs``
+  For sources hosted in Darcs repositories
+- ``svn``
+  For sources hosted in Subversion repositories
+- ``cvs``
+  For sources hosted in CVS repositories

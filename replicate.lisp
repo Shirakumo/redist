@@ -51,24 +51,16 @@
                        (gethash (string-downcase project) table)))))
     table))
 
-(defun fetch (url &optional processor verbose)
-  (when verbose (verbose "Fetching ~a" url))
-  (let ((data (run-string "curl" "-L" url)))
-    (if processor
-        (with-input-from-string (stream data)
-          (funcall processor stream))
-        data)))
-
-(defun replicate-dist (url &key name verbose)
+(defun replicate-dist (url &key name (verbose T) (download-archives T))
   (let* ((distinfo (fetch url #'read-dist-index verbose))
          (dist-versions (fetch (gethash "available-versions-url" distinfo) #'read-dist-releases-index verbose))
          (name (or name (gethash "name" distinfo)))
          (dist (make-instance 'dist :name name :url (gethash "archive-base-url" distinfo))))
     (loop for url being the hash-values of dist-versions
-          do (replicate-dist-version dist url :verbose verbose :disturl url))
+          do (replicate-dist-version dist url :verbose verbose :disturl url :download-archives download-archives))
     dist))
 
-(defun replicate-dist-version (dist url &key verbose disturl (download-archives T))
+(defun replicate-dist-version (dist url &key (verbose T) disturl (download-archives T))
   (let* ((distinfo (fetch url #'read-dist-index verbose))
          (disturl (or disturl (format NIL "~a/~a.txt" (url dist) (name dist))))
          (version (gethash "version" distinfo))
@@ -82,11 +74,8 @@
                  (let ((project (project name)))
                    (unless project
                      (when verbose (verbose "Creating ~a" name))
-                     (let ((source (make-instance 'dist-source 
-                                                  :url disturl
-                                                  :project name
-                                                  :version version)))
-                       (setf project (make-instance 'project :name name :sources (list source)))
+                     (let ((source (make-instance 'dist-source :url disturl :project name)))
+                       (setf project (make-instance 'project :name name :sources (list source) :verbose verbose))
                        (setf (project name) project)))
                    (pushnew project (projects dist))
                    (let ((release (find-release version project)))

@@ -129,6 +129,7 @@
 
 (defun coerce-args (args)
   (loop for arg in args
+        when arg
         collect (etypecase arg
                   (pathname (pathname-utils:native-namestring arg))
                   (string arg)
@@ -145,6 +146,14 @@
           (return (string-right-trim '(#\Return #\Linefeed #\Space)
                                      (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
                                                            (coerce-args args) :on-non-zero-exit :error :output :string))))))
+
+(defun fetch (url &optional processor verbose)
+  (when verbose (verbose "Fetching ~a" url))
+  (let ((data (run-string "curl" "-L" url)))
+    (if processor
+        (with-input-from-string (stream data)
+          (funcall processor stream))
+        data)))
 
 (defun prune-plist (plist)
   (loop for (k v) on plist by #'cddr
@@ -167,7 +176,7 @@
            (if (and a (string/= "" a))
                (parse-integer a)
                0)))
-    (or (cl-ppcre:register-groups-bind (yy mm dd h m s) ("(\\d{1,4})[-,./](\\d{1,2})[-,./](\\d{1,2})(?:[tT/ ](\\d{1,2})[:.-](\\d{1,2})(?:[:.-](\\d{1,3}))?)?" time)
+    (or (cl-ppcre:register-groups-bind (yy mm dd h m s) ("(\\d{1,4})[-,./](\\d{1,2})[-,./](\\d{1,2})(?:[tT/ -](\\d{1,2})[:.-](\\d{1,2})(?:[:.-](\\d{1,3}))?)?" time)
           (encode-universal-time (p s) (p m) (p h) (p dd) (p mm) (p yy) time-zone))
         (cl-ppcre:register-groups-bind (h m s) ("[tT]?(\\d{1,2})[:.-](\\d{1,2})(?:[:.-](\\d{1,3}))?" time)
           (+ (p s) (* (p m) 60) (* (p h) 60 60)))
