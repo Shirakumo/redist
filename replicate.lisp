@@ -96,8 +96,9 @@
                                                                    collect (list* (getf data :name) data))))
                        (when download-archives
                          (let ((target (merge-pathnames (path release) (default-output-directory))))
-                           (ensure-directories-exist target)
-                           (run "curl" "-L" "-o" target url))))
+                           (unless (probe-file target)
+                             (ensure-directories-exist target)
+                             (run "curl" "-L" "-o" target url)))))
                      (push release project-releases)))))
       (when verbose (verbose "Creating ~a / ~a" (name dist) version))
       (setf dist-release (ensure-release (list version
