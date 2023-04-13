@@ -55,10 +55,10 @@
   (let* ((distinfo (fetch url #'read-dist-index verbose))
          (dist-versions (fetch (gethash "available-versions-url" distinfo) #'read-dist-releases-index verbose))
          (name (or name (gethash "name" distinfo)))
-         (dist (make-instance 'dist :name name :url (gethash "archive-base-url" distinfo))))
+         (dist (ensure-instance (dist name) 'dist :name name :url (gethash "archive-base-url" distinfo))))
     (loop for url being the hash-values of dist-versions
           do (replicate-dist-version dist url :verbose verbose :disturl url :download-archives download-archives))
-    dist))
+    (setf (dist name) dist)))
 
 (defun replicate-dist-version (dist url &key (verbose T) disturl (download-archives T))
   (let* ((distinfo (fetch url #'read-dist-index verbose))
