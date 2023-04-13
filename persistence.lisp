@@ -94,7 +94,8 @@
 
 (defmethod serialize append ((project project))
   (list :disabled-p (disabled-p project)
-        :source-directory (source-directory project)
+        :source-directory (pathname-utils:enough-pathname
+                           (source-directory project) (default-source-directory))
         :excluded-systems (excluded-systems project)
         :excluded-paths (excluded-paths project)
         :releases (mapcar #'serialize (releases project))))

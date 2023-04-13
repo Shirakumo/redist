@@ -217,7 +217,7 @@
    (version-cache :initform NIL :accessor version-cache)))
 
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory (verbose T))
-  (when source-directory (setf (source-directory project) (uiop:truenamize source-directory)))
+  (when source-directory (setf (source-directory project) (uiop:truenamize (absolutize source-directory (default-source-directory)))))
   (unless (slot-boundp project 'source-directory)
     (setf (source-directory project) (pathname-utils:subdirectory (default-source-directory) (name project))))
   (when releases-p (setf (releases project) releases))
@@ -226,7 +226,6 @@
              (not (disabled-p project))
              (or (not (probe-file (source-directory project)))
                  (empty-directory-p (source-directory project))))
-    (break)
     (restart-case (clone project :verbose verbose)
       (disable ()
         :report "Disable the project"
@@ -449,10 +448,7 @@
   (when systems-p (setf (systems release) systems))
   (when (slot-boundp release 'source-files)
     (loop for cons on (source-files release)
-          for path = (car cons)
-          do (multiple-value-bind (absolute-p path) (pathname-utils:absolute-p path)
-               (unless absolute-p
-                 (setf (car cons) (merge-pathnames path (source-directory (project release)))))))))
+          do (setf (car cons) (absolutize (car cons) (source-directory (project release)))))))
 
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)

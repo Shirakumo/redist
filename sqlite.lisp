@@ -19,8 +19,7 @@
 
 (defun call-with-sqlite (function file &key (if-does-not-exist :create))
   (cond (*sqlite*
-         (sqlite:with-transaction *sqlite*
-           (funcall function)))
+         (funcall function))
         (T
          (unless (probe-file file)
            (ecase if-does-not-exist
@@ -59,6 +58,7 @@
 (defun restore-sqlite (&key (file (sqlite-file)) (if-does-not-exist :error) restore-source-files)
   ;; FIXME: add a "ignore if exists" option for releases
   (with-sqlite (file :if-does-not-exist if-does-not-exist)
+    (init-sqlite)
     (do-select (id name source_directory disabled) ("FROM projects")
       (let* ((sources ())
              (project (ensure-instance (project name) 'project :name name :source-directory source_directory)))
@@ -119,6 +119,7 @@
 
 (defun persist-sqlite (&key (file (sqlite-file)))
   (with-sqlite (file)
+    (init-sqlite)
     (flet ((update (table ids &rest values)
              (update-sqlite table ids values :if-exists :update))
            (insert (table ids &rest values)
@@ -127,11 +128,13 @@
              (query_ (format NIL "DELETE FROM ~a WHERE ~a=?" table id-field) id)
              (dolist (value values)
                (query_ (format NIL "INSERT INTO ~a(~a,~a) VALUES(?,?)" table id-field value-field)
-                       id value))))
+                       id value)))
+           (relpath (path parent)
+             (namestring (pathname-utils:enough-pathname path parent))))
       (loop for project in (list-projects)
             for id = (update "projects" '(:name)
                              :name (name project)
-                             :source_directory (namestring (source-directory project))
+                             :source_directory (relpath (source-directory project) (default-source-directory))
                              :disabled (if (disabled-p project) 1 0))
             do (query_ "DELETE FROM project_sources WHERE project=?" id)
                (dolist (source (sources project))
@@ -147,7 +150,9 @@
                                        :archive_md5 (archive-md5 release)
                                        :source_sha1 (source-sha1 release))
                      do (when rid
-                          (refill "project_release_source_files" :project_release rid :path (mapcar #'namestring (source-files release)))
+                          (when (source-files release)
+                            (refill "project_release_source_files" :project_release rid :path (loop for path in (source-files release)
+                                                                                                    collect (relpath path (source-directory project)))))
                           (loop for system in (systems release)
                                 for sid = (insert "project_release_systems" '(:project_release :name)
                                                   :project_release rid

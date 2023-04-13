@@ -95,6 +95,12 @@
         (T
          (apply #'change-class instance type initargs))))
 
+(defun absolutize (path base)
+  (multiple-value-bind (absolute-p path) (pathname-utils:absolute-p path)
+    (if absolute-p
+        path
+        (merge-pathnames path base))))
+
 (defun ends-with (end string)
   (and (<= (length end) (length string))
        (string= end string :start2 (- (length string) (length end)))))
