@@ -66,7 +66,7 @@ update                Update local project checkouts
 
 list                  List known objects
   thing                  The thing to list. Can be projects, dists, or
-                         releases
+                         releases. Defaults to releases of all dists.
   -p --project project   The project to list releases of
   -d --dist dist         The dist to list releases of
 
@@ -106,7 +106,7 @@ help                  Shows this help listing
     (do-list* (project (or (enlist project) (list-projects)))
       (update project :version version :verbose verbose))))
 
-(defun main/list (thing &key project dist)
+(defun main/list (&optional (thing "releases") &key project dist)
   (cond ((string-equal thing "projects")
          (dolist (project (list-projects))
            (format T "~&~a~%" (name project))))
@@ -115,9 +115,9 @@ help                  Shows this help listing
            (format T "~&~a~%" (name dist))))
         ((or (string-equal thing "releases")
              (string-equal thing "versions"))
-         (dolist (release (releases (cond (project (project project))
-                                          (dist (dist dist))
-                                          (T (error "Must pass either DIST or PROJECT.")))))
+         (dolist (release (cond (project (releases (project project)))
+                                (dist (releases (dist dist)))
+                                (T (loop for dist in (list-dists) append (releases dist)))))
            (format T "~&~a~%" (version release))))
         ((string-equal thing "sources")
          (labels ((rec (class)
@@ -133,14 +133,14 @@ help                  Shows this help listing
          (type (intern (string-upcase (or type "git")) "KEYWORD"))
          (project (or (project name)
                       (make-instance 'project :name name :sources `((,type ,url))))))
-    (dolist (dist (or (enlist dist) (list-dists)))
+    (dolist (dist (or (enlist dist) (list-dists)) (setf (project name) project))
       (add-project project dist))))
 
 (defun main/remove (name &key dist)
   (let ((project (or (project name)
                      (error "No project named ~s" name))))
     (dolist (dist (or (enlist dist) (list-dists)))
-      (remove-project project))))
+      (remove-project project dist))))
 
 (defun parse-args (args &key flags chars)
   (let ((kargs ())

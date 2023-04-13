@@ -74,6 +74,9 @@ available-versions-url: ~a"
 
 (defgeneric compile (thing &key))
 
+(defmethod compile ((name string) &rest args &key &allow-other-keys)
+  (apply #'compile (dist name) args))
+
 (defmethod compile ((name symbol) &rest args &key &allow-other-keys)
   (apply #'compile (dist name) args))
 
