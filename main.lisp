@@ -86,6 +86,15 @@ remove                Remove a project from dists
                          specified multiple times. If unspecified,
                          removes from all dists
 
+replicate             Create a new mirror of another dist
+  url                    The URL of the distinfo file to replicate
+  -n --name name         The name of the dist. If unspecified is
+                         taken from the dist metadata.
+  -v --verbose           To print verbose output about the progress
+  -l --latest-only       To only download the latest version, rather
+                         than the default of all available versions
+  -s --skip-archives     Don't download the release archives
+
 help                  Shows this help listing
 "))
 
@@ -142,6 +151,12 @@ help                  Shows this help listing
     (dolist (dist (or (enlist dist) (list-dists)))
       (remove-project project dist))))
 
+(defun main/replicate (url &key name verbose latest-only skip-archives)
+  (replicate-dist url :name name
+                      :verbose verbose
+                      :current-version-only latest-only
+                      :download-archives (not skip-archives)))
+
 (defun parse-args (args &key flags chars)
   (let ((kargs ())
         (pargs ()))
@@ -194,11 +209,12 @@ help                  Shows this help listing
               (restore :if-does-not-exist NIL)
               (when (ignore-errors (cffi:load-foreign-library 'sqlite-ffi::sqlite3-lib))
                 (restore-sqlite :if-does-not-exist NIL))
-              (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite)
+              (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite :latest-only :skip-archives)
                                                        :chars '(#\v :verbose #\u :update #\f :force
                                                                 #\d :dist #\p :project #\n :version
                                                                 #\n :name #\t :type #\x :overwrite
-                                                                #\j :jobs))))))
+                                                                #\j :jobs #\l :latest-only
+                                                                #\s :skip-archives))))))
       (error (e)
         (format *error-output* "~&ERROR: ~a~%" e)
         (uiop:quit 2)))
