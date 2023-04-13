@@ -146,12 +146,14 @@ Please see https://shirakumo.org/projects/redist for more information.
       (do-list* (dist (or (enlist dist) (list-dists)))
         (if overwrite
             (apply #'compile dist :version (version (first (releases dist))) args)
-            (apply #'compile dist args))))))
+            (apply #'compile dist args))))
+    (main-persist)))
 
 (defun main/update (&key version project verbose jobs)
   (with-kernel (when jobs (parse-integer jobs))
     (do-list* (project (or (enlist project) (list-projects)))
-      (update project :version version :verbose verbose))))
+      (update project :version version :verbose verbose))
+    (main-persist)))
 
 (defun main/list (&optional (thing "releases") &key project dist)
   (cond ((string-equal thing "projects")
@@ -181,19 +183,22 @@ Please see https://shirakumo.org/projects/redist for more information.
          (project (or (project name)
                       (make-instance 'project :name name :sources `((,type ,url))))))
     (dolist (dist (or (enlist dist) (list-dists)) (setf (project name) project))
-      (add-project project dist))))
+      (add-project project dist))
+    (main-persist)))
 
 (defun main/remove (name &key dist)
   (let ((project (or (project name)
                      (error "No project named ~s" name))))
     (dolist (dist (or (enlist dist) (list-dists)))
-      (remove-project project dist))))
+      (remove-project project dist))
+    (main-persist)))
 
 (defun main/replicate (url &key name verbose latest-only skip-archives)
   (replicate-dist url :name name
                       :verbose verbose
                       :current-version-only latest-only
-                      :download-archives (not skip-archives)))
+                      :download-archives (not skip-archives))
+  (main-persist))
 
 (defun parse-args (args &key flags chars)
   (let ((kargs ())
@@ -226,6 +231,20 @@ Please see https://shirakumo.org/projects/redist for more information.
                       (push arg pargs)))))
     (append (nreverse pargs) kargs)))
 
+(defun main-persist ()
+  (cond ((or (when (probe-file (sqlite-file))
+               (persist-sqlite) T)
+             (when (probe-file (distinfo-file))
+               (persist) T)))
+        ((and (cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
+              (probe-file (pathname-utils:to-directory (sqlite-file))))
+         (persist-sqlite))
+        ((and (probe-file (pathname-utils:to-directory (distinfo-file))))
+         (persist))
+        (T
+         (error "Neither of~%  ~a~%  ~a~%exist. Cannot save database!"
+                (sqlite-file) (distinfo-file)))))
+
 (defun main (&optional (args (uiop:command-line-arguments)))
   (let ((args (or args '("help"))))
     (handler-case
@@ -256,18 +275,6 @@ Please see https://shirakumo.org/projects/redist for more information.
       (error (e)
         (format *error-output* "~&ERROR: ~a~%" e)
         (uiop:quit 2)))
-    (cond ((or (when (probe-file (sqlite-file))
-                 (persist-sqlite) T)
-               (when (probe-file (distinfo-file))
-                 (persist) T)))
-          ((and (cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
-                (probe-file (pathname-utils:to-directory (sqlite-file))))
-           (persist-sqlite))
-          ((and (probe-file (pathname-utils:to-directory (distinfo-file))))
-           (persist))
-          (T
-           (error "Neither of~%  ~a~%  ~a~%exist. Cannot save database!"
-                  (sqlite-file) (distinfo-file))))
     (uiop:quit)))
 
 ;; Sigh.
