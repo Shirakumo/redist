@@ -80,7 +80,7 @@
                                   :systems systems)
                             project)))))
     (do-select (id name url) ("FROM dists")
-      (let ((dist (ensure-instance (dist name) 'dist 
+      (let ((dist (ensure-instance (dist name) 'dist
                                    :name name :url url
                                    :projects (query1 "SELECT p.name FROM projects AS p INNER JOIN dist_projects AS dp ON p.ID = dp.project WHERE dp.dist = ?" id)
                                    :excluded-paths (query1 "SELECT path FROM dist_excluded_paths WHERE dist=?" id))))

@@ -61,7 +61,7 @@
    (url :initarg :url :initform (arg! :url) :accessor url)
    (projects :initform () :accessor projects)
    (releases :initform () :accessor releases)
-   (excluded-paths :initarg excluded-paths :initform () :accessor excluded-paths)))
+   (excluded-paths :initarg :excluded-paths :initform () :accessor excluded-paths)))
 
 (defmethod shared-initialize :after ((dist dist) slots &key (projects NIL projects-p) (releases NIL releases-p))
   (when projects-p (setf (projects dist) projects))
