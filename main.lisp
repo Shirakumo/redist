@@ -131,7 +131,10 @@ completed, redist will persist the information to disk again:
 If the Sqlite database is present, it stores to it again. Same for the
 distinfo file if it does exist already. If neither exist, it will save
 to Sqlite if the Sqlite library was successfully loaded, and otherwise
-to the distinfo file."))
+to the distinfo file.
+
+Please see https://shirakumo.org/projects/redist for more information.
+"))
 
 (defun main/compile (&key version update dist verbose force overwrite jobs)
   (when overwrite
