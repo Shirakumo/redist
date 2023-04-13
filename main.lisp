@@ -116,7 +116,7 @@ DISTINFO_FILE         The plain text file that defines dists,
                       to, in order:
                       DIST_SOURCE_DIR/../distinfo.lisp
                       DIST_OUTPUT_DIR/../distinfo.lisp
-                      ~/dist/distinfo.lisp
+                      ~~/dist/distinfo.lisp
 
 Database Info:
 
