@@ -14,7 +14,7 @@
   :bug-tracker "https://github.com/Shirakumo/redist/issues"
   :source-control (:git "https://github.com/Shirakumo/redist.git")
   :build-operation "program-op"
-  :build-pathname #+windows "redist.exe" #-windows "redist"
+  :build-pathname #+windows "redist.exe" #+darwin "redist.o" #-(or darwin windows) "redist"
   :entry-point "org.shirakumo.redist::main"
   :serial T
   :components ((:file "package")

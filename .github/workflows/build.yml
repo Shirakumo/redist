@@ -7,7 +7,10 @@ on:
       - "v*.*.*"
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
       - name: Install env
         run: |
@@ -33,4 +36,4 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           append_body: true
-          files: redist
+          files: redist*
