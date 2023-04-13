@@ -7,7 +7,7 @@
 (in-package #:org.shirakumo.redist)
 
 (defvar *distinfo-file* NIL)
-(defvar *dists* (make-hash-table :test 'eql))
+(defvar *dists* (make-hash-table :test 'equalp))
 (defvar *projects* (make-hash-table :test 'equalp))
 
 (defun clear ()
@@ -23,14 +23,15 @@
       (merge-pathnames "dist/distinfo.lisp" (user-homedir-pathname))))
 
 (defmethod dist ((name symbol))
-  (gethash name *dists*))
+  (dist (string name)))
 
 (defmethod dist ((name string))
-  (loop for dist being the hash-values of *dists*
-        when (string-equal name (name dist))
-        do (return dist)))
+  (gethash name *dists*))
 
 (defmethod (setf dist) ((dist dist) (name symbol))
+  (setf (dist (string name)) dist))
+
+(defmethod (setf dist) ((dist dist) (name string))
   (setf (gethash name *dists*) dist))
 
 (defun list-dists ()
