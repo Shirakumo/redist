@@ -11,11 +11,7 @@
 
 (defun sqlite-file ()
   (or *sqlite-file*
-      (when *default-source-directory*
-        (merge-pathnames "../distinfo.db" *default-source-directory*))
-      (when *default-output-directory*
-        (merge-pathnames "../distinfo.db" *default-output-directory*))
-      (merge-pathnames "dist/distinfo.db" (user-homedir-pathname))))
+      (make-pathname :name "distinfo" :type "db" :defaults (distinfo-file))))
 
 (defun call-with-sqlite (function file &key (if-does-not-exist :create))
   (cond (*sqlite*

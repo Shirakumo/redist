@@ -96,7 +96,42 @@ replicate             Create a new mirror of another dist
   -s --skip-archives     Don't download the release archives
 
 help                  Shows this help listing
-"))
+
+Environment Variables:
+
+REDIST_DEBUG          When set, will enter the debugger on error
+DIST_SOURCE_DIR       The base directory of the project sources. If
+                      unspecified, defaults to
+                      DISTINFO_FILE/sources/
+DIST_OUTPUT_DIR       The base directory of the compiled
+                      output. You'll want to point your webserver at
+                      this. If unspecified, defaults to
+                      DISTINFO_FILE/releases/
+DIST_DATABASE         The Sqlite database file that fulfils the same
+                      purpose as the DISTINFO_FILE. If unspecified
+                      defaults to
+                      DISTINFO_FILE/distinfo.db
+DISTINFO_FILE         The plain text file that defines dists,
+                      projects, and so on. If unspecified, defaults
+                      to, in order:
+                      DIST_SOURCE_DIR/../distinfo.lisp
+                      DIST_OUTPUT_DIR/../distinfo.lisp
+                      ~/dist/distinfo.lisp
+
+Database Info:
+
+Redist keeps a database of all the dists, projects, and releases. This
+database can be stored as a plaintext Lisp source file (the
+\"distinfo\" file) or as an Sqlite database. On startup, redist will
+first load the distinfo file if it exists, then load the Sqlite
+database if it exists and Sqlite can be loaded.
+
+After whatever operation the user has selected has successfully
+completed, redist will persist the information to disk again:
+If the Sqlite database is present, it stores to it again. Same for the
+distinfo file if it does exist already. If neither exist, it will save
+to Sqlite if the Sqlite library was successfully loaded, and otherwise
+to the distinfo file."))
 
 (defun main/compile (&key version update dist verbose force overwrite jobs)
   (when overwrite
@@ -218,10 +253,10 @@ help                  Shows this help listing
       (error (e)
         (format *error-output* "~&ERROR: ~a~%" e)
         (uiop:quit 2)))
-    (cond ((probe-file *sqlite-file*)
-           (persist-sqlite))
-          ((probe-file *distinfo-file*)
-           (persist))
+    (cond ((or (when (probe-file *sqlite-file*)
+                 (persist-sqlite) T)
+               (when (probe-file *distinfo-file*)
+                 (persist) T)))
           ((cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
            (persist-sqlite))
           (T
