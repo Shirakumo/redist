@@ -182,7 +182,7 @@
 
 (defclass dist-source (source-manager)
   ((project :initarg :project :initform (arg! :project) :accessor project)
-   (version :initform NIL :accessor version)))
+   (version :initarg :version :initform NIL :accessor version)))
 
 (defmethod clone ((manager dist-source) &key version)
   (let* ((index (with-input-from-string (stream (run-string "curl" "-L" (url manager)))

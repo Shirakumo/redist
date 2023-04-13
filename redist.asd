@@ -26,6 +26,7 @@
                (:file "sources")
                (:file "ql-support")
                (:file "compile")
+               (:file "replicate")
                (:file "test")
                (:file "main")
                (:file "documentation"))

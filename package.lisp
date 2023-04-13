@@ -86,6 +86,10 @@
    #:define-project
    #:define-dist
    #:main)
+  ;; replicate.lisp
+  (:export
+   #:replicate-dist
+   #:replicate-dist-version)
   ;; sources.lisp
   (:export
    #:cvs

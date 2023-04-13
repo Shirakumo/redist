@@ -154,6 +154,19 @@
         (subseq url (1+ slash) (- (length url) (length ".git")))
         (subseq url (1+ slash)))))
 
+(defun parse-time (time &key time-zone error default)
+  (flet ((p (a)
+           (if (and a (string/= "" a))
+               (parse-integer a)
+               0)))
+    (or (cl-ppcre:register-groups-bind (yy mm dd h m s) ("(\\d{1,4})[-,./](\\d{1,2})[-,./](\\d{1,2})(?:[tT/ ](\\d{1,2})[:-](\\d{1,2})(?:[:-](\\d{1,3}))?)?" time)
+          (encode-universal-time (p s) (p m) (p h) (p dd) (p mm) (p yy) time-zone))
+        (cl-ppcre:register-groups-bind (h m s) ("[tT]?(\\d{1,2})[:-](\\d{1,2})(?:[:-](\\d{1,3}))?" time)
+          (+ (p s) (* (p m) 60) (* (p h) 60 60)))
+        (if error
+            (error "Cannot parse ~s into a time." time)
+            default))))
+
 (defmacro do-list* ((el list) &body body)
   (let ((l (gensym "LIST"))
         (thunk (gensym "THUNK")))

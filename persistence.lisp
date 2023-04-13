@@ -10,6 +10,10 @@
 (defvar *dists* (make-hash-table :test 'eql))
 (defvar *projects* (make-hash-table :test 'equalp))
 
+(defun clear ()
+  (clrhash *dists*)
+  (clrhash *projects*))
+
 (defun distinfo-file ()
   (or *distinfo-file*
       (when *default-source-directory*
