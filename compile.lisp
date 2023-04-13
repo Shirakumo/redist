@@ -83,11 +83,13 @@ available-versions-url: ~a"
   (remf args :projects)
   (when verbose
     (verbose "Compiling ~a ~a" (name dist) version))
-  (let ((release (or (find-release version dist)
-                     (if projects-p
-                         (make-release dist :update update :version version :verbose verbose :projects projects)
-                         (make-release dist :update update :version version :verbose verbose))))
-        (success NIL))
+  (let* ((release (find-release version dist))
+         (already-existing (not (null release)))
+         (success NIL))
+    (unless release
+      (setf release (if projects-p
+                        (make-release dist :update update :version version :verbose verbose :projects projects)
+                        (make-release dist :update update :version version :verbose verbose))))
     (unwind-protect
          (multiple-value-prog1 (apply #'compile release args)
            (flet ((f (path)
@@ -105,7 +107,7 @@ available-versions-url: ~a"
              (generate-html (f (path dist)) "index" "dist" :dist dist))
            (setf success T))
       ;; We did not return successfully, so remove the release again.
-      (unless success
+      (when (and (not already-existing) (not success))
         ;; FIXME: add delete command to remove files as well.
         ;;        need to be careful to not remove files from shared releases
         (setf (releases dist) (remove release (releases dist)))))))
@@ -144,9 +146,10 @@ available-versions-url: ~a"
                                 (verbose "~a" e))
                               (continue e))))
         (update (project release) :version (version release))
-        (prog1 (tgz (source-files release) (ensure-directories-exist target)
-                    :archive-root (make-pathname :directory (list :relative (prefix release)))
-                    :base (source-directory (project release)) :if-exists if-exists)
-          (setf (archive-md5 release) (digest (merge-pathnames (path release) output) :md5))
-          (generate-html target "index" "project" :project (project release))
-          (generate-html target (version release) "project-release" :release release))))))
+        (tgz (source-files release) (ensure-directories-exist target)
+             :archive-root (make-pathname :directory (list :relative (prefix release)))
+             :base (source-directory (project release)) :if-exists if-exists)
+        (setf (archive-md5 release) (digest (merge-pathnames (path release) output) :md5))))
+    (generate-html target "index" "project" :project (project release))
+    (generate-html target (version release) "project-release" :release release)
+    target))

@@ -106,8 +106,8 @@
 
 (defmethod serialize append ((release project-release))
   (list (version release)
-        :source-files (loop for path in (source-files release)
-                            collect (enough-namestring path (source-directory (project release))))
+        ;; NOTE: we are omitting the source-files here as they're not necessary for dist metadata
+        ;;       and would have to be re-gathered from checkout on a forced recompile anyway.
         :source-sha1 (source-sha1 release)
         :archive-md5 (archive-md5 release)
         :systems (mapcar #'serialize (systems release))))

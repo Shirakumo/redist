@@ -98,12 +98,12 @@
     ;; Might as well use these, since we already need all the other binary utilities...
     (unwind-protect
          (progn
-           (run "curl" "-L" "-o" (uiop:native-namestring temp) url)
+           (run "curl" "-L" "-o" temp url)
            (cond ((or (ends-with ".tar.gz" name)
                       (ends-with ".tgz" name))
-                  (run "tar" "-xf" (uiop:native-namestring temp) "-C" "."))
+                  (run "tar" "-xf" temp "-C" "."))
                  ((or (ends-with ".zip" name))
-                  (run "unzip" (uiop:native-namestring temp) "-d" "."))
+                  (run "unzip" temp "-d" "."))
                  ((or (ends-with ".lisp" name)
                       (ends-with ".lsp" name))
                   (let* ((local (merge-pathnames name simple-inferiors:*cwd*))

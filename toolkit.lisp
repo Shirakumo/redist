@@ -127,16 +127,24 @@
         (with-output-to-string (stream)
           (%url-encode stream)))))
 
+(defun coerce-args (args)
+  (loop for arg in args
+        collect (etypecase arg
+                  (pathname (pathname-utils:native-namestring arg))
+                  (string arg)
+                  (number (prin1-to-string arg))
+                  (symbol (string arg)))))
+
 (defun run (command &rest args)
   (loop (with-simple-restart (retry "Retry running the program")
           (return (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
-                                        args :on-non-zero-exit :error)))))
+                                        (coerce-args args) :on-non-zero-exit :error)))))
 
 (defun run-string (command &rest args)
   (loop (with-simple-restart (retry "Retry running the program")
           (return (string-right-trim '(#\Return #\Linefeed #\Space)
                                      (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
-                                                           args :on-non-zero-exit :error :output :string))))))
+                                                           (coerce-args args) :on-non-zero-exit :error :output :string))))))
 
 (defun prune-plist (plist)
   (loop for (k v) on plist by #'cddr
