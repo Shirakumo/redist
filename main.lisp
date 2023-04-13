@@ -257,10 +257,14 @@ to the distinfo file."))
                  (persist-sqlite) T)
                (when (probe-file (distinfo-file))
                  (persist) T)))
-          ((cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
+          ((and (cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
+                (probe-file (pathname-utils:to-directory (sqlite-file))))
            (persist-sqlite))
+          ((and (probe-file (pathname-utils:to-directory (distinfo-file))))
+           (persist))
           (T
-           (persist)))
+           (error "Neither of~%  ~a~%  ~a~%exist. Cannot save database!"
+                  (sqlite-file) (distinfo-file))))
     (uiop:quit)))
 
 ;; Sigh.
