@@ -70,6 +70,11 @@ list                  List known objects
   -p --project project   The project to list releases of
   -d --dist dist         The dist to list releases of
 
+describe              Describe information about an object
+  -p --project project   The project to describe
+  -d --dist dist         The dist to describe
+  -v --version version   The version to describe
+
 add                   Add a new project or add a project to a dist
   url                    The url of the project's primary remote.
   -t --type type         The type of the remote source. Defaults to
@@ -176,6 +181,34 @@ Please see https://shirakumo.org/projects/redist for more information.
            (rec (find-class 'source-manager))))
         (T
          (error "Don't know how to list ~a." thing))))
+
+(defun main/describe (&key dist project version)
+  (cond (dist
+         (let ((dist (or (dist dist) (error "No dist named ~s" dist))))
+           (describe (if version
+                         (find-release version dist)
+                         dist))))
+        (project
+         (let ((project (or (project project) (error "No project named ~s" project))))
+           (describe (if version
+                         (find-release version project)
+                         project))))
+        (T
+         (format *error-output* "~
+Sources:~12t~a
+Output:~12t~a
+Distinfo:~12t~a
+Sqlite:~12t~a
+Dists:~12t~{~a ~a~^~%~12t~}
+Projects:~12t~{~a ~a~^~%~12t~}"
+                 (default-source-directory)
+                 (default-output-directory)
+                 (distinfo-file)
+                 (sqlite-file)
+                 (loop for dist in (list-dists)
+                       collect (version dist) collect (name dist))
+                 (loop for project in (list-projects)
+                       collect (version project) collect (name project))))))
 
 (defun main/add (url &key type name dist)
   (let* ((name (or name (url-extract-name url)))

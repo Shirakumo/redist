@@ -71,6 +71,17 @@
   (print-unreadable-object (dist stream :type T)
     (format stream "~s ~a" (name dist) (url dist))))
 
+(defmethod describe-object ((dist dist) stream)
+  (format stream "~
+Name:~12t~a
+Url:~12t~a
+Version:~12t~a
+Projects:~12t~a
+Versions:~12t~a"
+          (name dist) (url dist) (version dist)
+          (mapcar #'name (projects dist))
+          (mapcar #'version (releases dist))))
+
 (defmethod (setf releases) :around ((releases cons) (dist dist))
   (call-next-method (sort (loop for release in releases collect (ensure-release release dist)) #'version>) dist))
 
@@ -235,6 +246,21 @@
   (print-unreadable-object (project stream :type T)
     (format stream "~a ~:[INACTIVE~;ACTIVE~]" (name project) (not (disabled-p project)))))
 
+(defmethod describe-object ((project project) stream)
+  (format stream "~
+Name:~12t~a
+Status:~12t~:[Enabled~;Disabled~]
+Version:~12t~a
+Sources:~12t~a
+Directory:~12t~a
+Versions:~12t~a"
+          (name project)
+          (disabled-p project)
+          (version project)
+          (mapcar #'serialize (sources project))
+          (namestring (source-directory project))
+          (mapcar #'version (releases project))))
+
 (defmethod (setf releases) :around (releases (project project))
   (call-next-method (sort (loop for release in releases collect (ensure-release release project)) #'version>) project))
 
@@ -336,7 +362,9 @@
       (setf (version-cache project)
             (simple-inferiors:with-chdir ((source-directory project))
               (loop for source in (sources project)
-                    thereis (ignore-errors (version source)))))))
+                    thereis (ignore-errors (version source)))))
+      (when (releases project)
+        (version (first (releases project))))))
 
 (defmethod list-versions ((project project))
   (mapcar #'version (releases project)))
@@ -369,6 +397,19 @@
 (defmethod print-object ((release release) stream)
   (print-unreadable-object (release stream :type T)
     (format stream "~a" (version release))))
+
+(defmethod describe-object ((release release) stream)
+  (format stream "~
+Dist:~12t~a
+Version:~12t~a
+Timestamp:~12t~a
+Projects:~12t~{~a ~a~^~%~12t~}"
+          (name (dist release))
+          (version release)
+          (timestamp release)
+          (loop for project-release in (projects release)
+                collect (version project-release)
+                collect (name (project project-release)))))
 
 (defmethod (setf projects) :around (projects (release release))
   (call-next-method (loop for project in projects collect (ensure-project-release project release)) release))
@@ -453,6 +494,19 @@
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
     (format stream "~a ~a" (name (project release)) (version release))))
+
+(defmethod describe-object ((release project-release) stream)
+  (format stream "~
+Project:~12t~a
+Version:~12t~a
+Archive MD5:~12t~a
+Source SHA1:~12t~a
+Systems:~12t~a"
+          (name (project release))
+          (version release)
+          (archive-md5 release)
+          (source-sha1 release)
+          (mapcar #'name (systems release))))
 
 (defmethod (setf systems) :around ((systems cons) (release project-release))
   (call-next-method (sort (loop for system in systems collect (ensure-system system release)) #'string< :key #'name) release))
