@@ -102,7 +102,7 @@
                      (push release project-releases)))))
       (when verbose (verbose "Creating ~a / ~a" (name dist) version))
       (setf dist-release (ensure-release (list version
-                                               :timestamp (parse-time version :error NIL :default (get-universal-time))
+                                               :timestamp (parse-time version :error NIL :time-zone 0 :default (get-universal-time))
                                                :projects project-releases)
                                          dist))
       (push dist-release (releases dist)))
