@@ -200,7 +200,7 @@ Output:~12t~a
 Distinfo:~12t~a
 Sqlite:~12t~a
 Dists:~12t~{~a ~a~^~%~12t~}
-Projects:~12t~{~a ~a~^~%~12t~}"
+Projects:~12t~{~a ~a~^~%~12t~}~%"
                  (default-source-directory)
                  (default-output-directory)
                  (distinfo-file)

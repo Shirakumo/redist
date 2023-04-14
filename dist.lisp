@@ -77,7 +77,7 @@ Name:~12t~a
 Url:~12t~a
 Version:~12t~a
 Projects:~12t~a
-Versions:~12t~a"
+Versions:~12t~a~%"
           (name dist) (url dist) (version dist)
           (mapcar #'name (projects dist))
           (mapcar #'version (releases dist))))
@@ -253,7 +253,7 @@ Status:~12t~:[Enabled~;Disabled~]
 Version:~12t~a
 Sources:~12t~a
 Directory:~12t~a
-Versions:~12t~a"
+Versions:~12t~a~%"
           (name project)
           (disabled-p project)
           (version project)
@@ -403,7 +403,7 @@ Versions:~12t~a"
 Dist:~12t~a
 Version:~12t~a
 Timestamp:~12t~a
-Projects:~12t~{~a ~a~^~%~12t~}"
+Projects:~12t~{~a ~a~^~%~12t~}~%"
           (name (dist release))
           (version release)
           (timestamp release)
@@ -501,7 +501,7 @@ Project:~12t~a
 Version:~12t~a
 Archive MD5:~12t~a
 Source SHA1:~12t~a
-Systems:~12t~a"
+Systems:~12t~a~%"
           (name (project release))
           (version release)
           (archive-md5 release)

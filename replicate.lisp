@@ -56,10 +56,10 @@
       (cl-ppcre:register-groups-bind (base ext) ("^(.*?)(\\.[^.]+)?$" (gethash "distinfo-subscription-url" distinfo))
         (format NIL "~a-versions~@[~a~]" base ext))))
 
-(defun replicate-dist (disturl &key name (verbose T) (download-archives T) current-version-only)
+(defun replicate-dist (disturl &key name (type 'timestamp-versioned-dist) (verbose T) (download-archives T) current-version-only)
   (let* ((distinfo (fetch disturl #'read-dist-index verbose))
          (name (or name (gethash "name" distinfo)))
-         (dist (ensure-instance (dist name) 'dist :name name :url (gethash "archive-base-url" distinfo))))
+         (dist (ensure-instance (dist name) type :name name :url (gethash "archive-base-url" distinfo))))
     (if current-version-only
         (replicate-dist-version dist disturl :verbose verbose :disturl disturl :download-archives download-archives)
         (loop for url being the hash-values of (fetch (available-versions-url distinfo) #'read-dist-releases-index verbose)
