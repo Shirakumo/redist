@@ -388,8 +388,9 @@ Versions:~12t~a~%"
 (defmethod shared-initialize :after ((release release) slots &key (projects NIL projects-p))
   (when projects-p (setf (projects release) projects)))
 
-(defmethod initialize-instance :after ((release release) &key dist update verbose)
-  (unless (slot-boundp release 'projects)
+(defmethod initialize-instance :after ((release release) &key dist update verbose (projects NIL projects-p))
+  (declare (ignore projects))
+  (unless projects-p
     (setf (projects release)
           (do-list* (project (remove-if #'disabled-p (projects dist)))
             (make-release project :update update :verbose verbose)))))
