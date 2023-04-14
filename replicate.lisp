@@ -77,7 +77,8 @@
     (unless dist-release
       (loop for data being the hash-values of releases
             do (destructuring-bind (&key name url archive-md5 source-sha1 &allow-other-keys) data
-                 (let ((project (project name)))
+                 (let ((project (project name))
+                       (version source-sha1))
                    (unless project
                      (when verbose (verbose "Creating ~a" name))
                      (let ((source (make-instance 'dist-source :url disturl :project name)))
