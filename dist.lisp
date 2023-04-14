@@ -573,6 +573,7 @@ Systems:~12t~a~%"
 
 (defmethod shared-initialize :after ((system system) slots &key (dependencies NIL dependencies-p))
   (when dependencies-p (setf (dependencies system) dependencies))
+  (setf (name system) (string-downcase (name system)))
   (multiple-value-bind (absolute-p path) (pathname-utils:absolute-p (file system))
     (unless absolute-p
       (setf (file system) (merge-pathnames path (source-directory (project (project system))))))))
