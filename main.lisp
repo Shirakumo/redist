@@ -42,7 +42,7 @@
   (format T "Commands:
 
 compile               Compile a dist release
-  -v --version version   Specify the version to compile
+     --version version   Specify the version to compile
   -d --dist dist         Specify the dist to compile. Can be specified
                          multiple times. If unspecified, all dists are
                          compiled
@@ -56,7 +56,7 @@ compile               Compile a dist release
   -j --jobs N            Make the compilation threaded.
 
 update                Update local project checkouts
-  -v --version version   Specify the version to update to. If
+     --version version   Specify the version to update to. If
                          unspecified, updates to latest
   -p --project project   Specify the project to update. Can be
                          specified multiple times. If unspecified, all
@@ -73,7 +73,7 @@ list                  List known objects
 describe              Describe information about an object
   -p --project project   The project to describe
   -d --dist dist         The dist to describe
-  -v --version version   The version to describe
+     --version version   The version to describe
 
 add                   Add a new project or add a project to a dist
   url                    The url of the project's primary remote.
@@ -99,6 +99,12 @@ replicate             Create a new mirror of another dist
   -l --latest-only       To only download the latest version, rather
                          than the default of all available versions
   -s --skip-archives     Don't download the release archives
+
+archive               Update the release archives
+  -p --project project   Update all archives of the project
+  -d --dist dist         Update all archives of projects in the dist
+     --version version   Update only the given version
+  -v --verbose           To print verbose output about the progress
 
 help                  Shows this help listing
 
@@ -232,6 +238,21 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
                       :current-version-only latest-only
                       :download-archives (not skip-archives))
   (main-persist))
+
+(defun main/archive (&key project dist version verbose)
+  (labels ((package (release)
+             (compile release :force T :verbose verbose))
+           (process (project)
+             (if version
+                 (let ((release (find-release version project)))
+                   (when release (package release)))
+                 (mapc #'package (releases project)))))
+    (when project
+      (process (or (project project)
+                   (error "No project named ~s" project))))
+    (when dist
+      (mapc #'process (projects (or (dist dist)
+                                    (error "No dist named ~s" dist)))))))
 
 (defun parse-args (args &key flags chars)
   (let ((kargs ())
