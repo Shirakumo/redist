@@ -80,14 +80,16 @@
     (update manager :version version)))
 
 (defmethod update ((manager git) &key version)
-  (run "git" "fetch" "origin")
-  (run "git" "reset" "--hard" (cond (version version)
-                                    ((tag manager)
-                                     (if (eql :latest (tag manager))
-                                         (simple-inferiors:run "git" (list "describe" "--tags" "--abbrev=0") :output :string)
-                                         (tag manager)))
-                                    ((branch manager) (format NIL "origin/~a" (branch manager)))
-                                    (T (format NIL "origin/~a" (run-string "git" "branch" "--show-current"))))))
+  (cond (version
+         (run "git" "checkout" version))
+        (T
+         (run "git" "fetch" "origin")
+         (run "git" "reset" "--hard" (cond ((tag manager)
+                                            (if (eql :latest (tag manager))
+                                                (simple-inferiors:run "git" (list "describe" "--tags" "--abbrev=0") :output :string)
+                                                (tag manager)))
+                                           ((branch manager) (format NIL "origin/~a" (branch manager)))
+                                           (T (format NIL "origin/~a" (run-string "git" "branch" "--show-current"))))))))
 
 (defmethod version ((manager git))
   (run-string "git" "rev-parse" "HEAD"))

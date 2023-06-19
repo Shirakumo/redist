@@ -148,10 +148,10 @@ available-versions-url: ~a"
                               (when verbose
                                 (verbose "~a" e))
                               (continue e))))
-        (update (project release) :version (version release))
+        (update (project release) :verbose verbose :version (version release))
         (tgz (source-files release) (ensure-directories-exist target)
              :archive-root (make-pathname :directory (list :relative (prefix release)))
-             :base (source-directory (project release)) :if-exists if-exists)
+             :base (source-directory (project release)) :if-exists if-exists :verbose verbose)
         (setf (archive-md5 release) (digest (merge-pathnames (path release) output) :md5))))
     (generate-html target "index" "project" :project (project release))
     (generate-html target (version release) "project-release" :release release)

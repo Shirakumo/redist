@@ -8,7 +8,8 @@
 
 (defvar *here* #.(make-pathname :name NIL :type NIL :defaults (or *compile-file-pathname* *load-pathname*)))
 
-(defun tar (files output &key (if-exists :error) (base #p"/") (archive-root #p""))
+(defun tar (files output &key (if-exists :error) (base #p"/") (archive-root #p"") (verbose))
+  (when verbose (verbose "Packing to ~a:~{~&;   ~a~}" output files))
   (archive:with-open-archive (archive output
                               :direction :output
                               :if-exists if-exists)

@@ -194,9 +194,11 @@ Versions:~12t~a~%"
   (when verbose
     (verbose "Cloning from ~a ~a" (type-of manager) (url manager))))
 
-(defmethod update :before ((manager source-manager) &key verbose)
+(defmethod update :before ((manager source-manager) &key verbose version)
   (when verbose
-    (verbose "Updating from ~a" (url manager))))
+    (if version
+        (verbose "Checking out to ~a" version)
+        (verbose "Updating from ~a" (url manager)))))
 
 (defmethod update :around ((manager source-manager) &key &allow-other-keys)
   (with-simple-restart (continue "Ignore the update and continue as if it had happened.")
