@@ -347,7 +347,11 @@ Versions:~12t~a~%"
                  (continue ()
                    :report "Try the next source."))
             finally (cerror "Ignore the update failure." "No capable source to update~%  ~a"
-                            project)))))
+                            project))
+      (let ((release (find-release (version project) project)))
+        (when release
+          (setf (source-files release) T)))
+      project)))
 
 (defmethod clone ((project project) &rest args &key &allow-other-keys)
   (simple-inferiors:with-chdir ((source-directory project))
@@ -479,9 +483,7 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
 
 (defmethod initialize-instance :after ((release project-release) &key)
   (unless (slot-boundp release 'source-files)
-    (setf (source-files release) (gather-sources (source-directory (project release))
-                                                 (append (excluded-paths (project release))
-                                                         *excluded-paths*))))
+    (setf (source-files release) T))
   (unless (source-sha1 release)
     (setf (source-sha1 release) (digest (source-files release) :sha1)))
   (unless (slot-boundp release 'systems)
@@ -493,6 +495,12 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
   (when (slot-boundp release 'source-files)
     (loop for cons on (source-files release)
           do (setf (car cons) (absolutize (car cons) (source-directory (project release)))))))
+
+(defmethod (setf source-files) ((all (eql T)) (release project-release))
+  (setf (source-files release) (gather-sources (source-directory (project release))
+                                               (append (excluded-paths (project release))
+                                                       *excluded-paths*)))
+  (setf (source-sha1 release) (digest (source-files release) :sha1)))
 
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
