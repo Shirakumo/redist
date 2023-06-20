@@ -89,7 +89,7 @@
                                                 (simple-inferiors:run "git" (list "describe" "--tags" "--abbrev=0") :output :string)
                                                 (tag manager)))
                                            ((branch manager) (format NIL "origin/~a" (branch manager)))
-                                           (T (format NIL "origin/~a" (run-string "git" "branch" "--show-current"))))))))
+                                           (T (run-string "git" "rev-parse" "--abbrev-ref" "origin/HEAD")))))))
 
 (defmethod version ((manager git))
   (run-string "git" "rev-parse" "HEAD"))
