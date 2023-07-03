@@ -1,9 +1,3 @@
-#|
- This file is a part of Redist
- (c) 2021 Shirakumo http://tymoon.eu (shinmera@tymoon.eu)
- Author: Nicolas Hafner <shinmera@tymoon.eu>
-|#
-
 (defpackage #:org.shirakumo.redist
   (:shadow #:compile)
   (:use #:cl)
