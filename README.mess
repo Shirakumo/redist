@@ -9,7 +9,47 @@ This is a system implementing facilities to produce Quicklisp distributions. Spe
 6. A compiler that takes the project source files and dist information to produce the tarballs and metadata files Quicklisp expects for a dist. Ultimately you can just point an HTTP server at the output directory and your dist setup is complete.
 7. A testing system to allow compiling each of the systems in a dist release, and verify that they still perform as expected.
 
-## Quickstart
+## Quickstart (Binary)
+You can download a precompiled binary of Redist from the ''releases''(https://github.com/shirakumo/dist/releases/latest), or create it yourself by cloning Redist and using:
+
+::
+sbcl --eval '(asdf:make :redist)'
+::
+
+You should end up with a ``redist`` binary. When you invoke it, it should spill out a help that explains all the options and parameters. For a quickstart, first create your dist:
+
+::
+./redist add-dist my-dist --url "http://my.public.url"
+::
+
+Then create the projects you want to add:
+
+::
+./redist add https://github.com/someone/my-project.git
+./redist add https://someone.com/project.tgz
+::
+
+This will create a ``sources/`` directory where each project's source files are kept.
+
+Finally you can compile the dist files:
+
+::
+./redist compile -v
+::
+
+Once your dist has been compiled, it'll have created a ``releases/`` directory. You can simply copy this file to a static HTML server or serve them directly using nginx or similar.
+
+In the future to create a new dist release, you can simply invoke:
+
+::
+./redist compile -vu
+::
+
+To update all the projects, first. The ``-v`` flag prints output. You can also add ``-j 4`` or similar to speed up the process by running it on multiple threads.
+
+Depending on the availability of Sqlite, redist will save your data in a ``distinfo.db`` or in a lisp source file ``distinfo.lisp``. This data file is important to allow redist to create incremental releases.
+
+## Quickstart (Lisp)
 Creating your own dist is rather simple:
 
 :: common lisp
