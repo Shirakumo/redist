@@ -1,10 +1,8 @@
 name: build
 permissions:
   contents: write
-on:
-  push:
-    tags:
-      - "v*.*.*"
+on: [create, workflow_dispatch]
+
 jobs:
   build:
     strategy:
@@ -32,8 +30,15 @@ jobs:
                --eval '(asdf:load-asd "/home/runner/work/redist/redist/redist.asd")' \
                --eval '(asdf:make :redist)' \
                --non-interactive
-      - name: Release
-        uses: softprops/action-gh-release@v1
+      - name: Create release ZIP
+        run: |
+          zip -r redist-linux.zip redist template
+      - name: Create release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        continue-on-error: true
         with:
-          append_body: true
-          files: redist*
+          allowUpdates: true
+          name: Release ${{ github.ref_name }}
+          artifacts: redist-linux.zip
+
