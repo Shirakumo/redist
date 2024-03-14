@@ -79,6 +79,10 @@ add                   Add a new project or add a project to a dist
                          specified multiple times. If unspecified,
                          adds to all dists
 
+add-dist              Add a new dist
+  name                   The name of the dist to create
+  --url url              The canonical URL at which the dist resides
+
 remove                Remove a project from dists
   name                   The name of the project to remove
   -d --dist dist         The dist to remove the project from. Can be
@@ -218,6 +222,15 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
     (dolist (dist (or (enlist dist) (list-dists)) (setf (project name) project))
       (add-project project dist))
     (main-persist)))
+
+(defun main/add-dist (name &key url)
+  (let ((name (intern (string-upcase name) #.*package*)))
+    (when (dist name)
+      (error "A dist with this name already exists."))
+    (when (or (null url) (string= "" url))
+      (error "A canonical dist URL is required."))
+    (setf (dist name) (make-instance 'dist :name name :url url)))
+  (main-persist))
 
 (defun main/remove (name &key dist)
   (let ((project (or (project name)
