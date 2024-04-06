@@ -39,8 +39,9 @@ available-versions-url: ~a"
               (archive-md5 project)
               (source-sha1 project)
               (prefix project)
-              (remove-duplicates (loop for system in (systems project) collect (enough-namestring (file system)
-                                                                                                  (source-directory (project project))))
+              (remove-duplicates (loop for system in (systems project)
+                                       collect (enough-namestring (truename (file system))
+                                                                  (truename (source-directory (project project)))))
                                  :test #'string=)))))
 
 (defun write-system-index (release stream)
