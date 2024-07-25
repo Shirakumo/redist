@@ -14,6 +14,7 @@
   :components ((:file "package")
                (:file "toolkit")
                (:file "asdf")
+               (:file "storage")
                (:file "dist")
                (:file "persistence")
                (:file "sqlite")
@@ -25,6 +26,7 @@
                (:file "main")
                (:file "documentation"))
   :depends-on (:ironclad
+               :closer-mop
                :shasht
                :babel
                :archive
