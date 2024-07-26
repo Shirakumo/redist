@@ -4,8 +4,8 @@
   ((file :initarg :file :initform (make-pathname :name "distinfo" :type "db" :defaults (distinfo-file)) :accessor file)
    (connection :accessor connection)))
 
-(defmethod initialize-instance :after ((sqlite sqlite) &key (if-does-not-exist :create))
-  (let ((file (file sqlite)))
+(defmethod initialize-instance :after ((*storage* sqlite) &key (if-does-not-exist :create))
+  (let ((file (uiop:native-namestring (file *storage*))))
     (unless (probe-file file)
       (ecase if-does-not-exist
         (:error (error "Sqlite database file~%  ~a~%does not exist." file))
@@ -13,7 +13,7 @@
         ((NIL) (return-from initialize-instance NIL))))
     (unless (cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
       (cffi:load-foreign-library 'sqlite-ffi::sqlite3-lib))
-    (setf (connection sqlite) (sqlite:connect file))
+    (setf (connection *storage*) (sqlite:connect file))
     (dolist (statement (cl-ppcre:split "\\s*;\\s*" #.(alexandria:read-file-into-string
                                                       (asdf:system-relative-pathname :redist "schema.sql"))))
       (query_ statement))))
@@ -31,49 +31,84 @@
   `(loop for ,vars in (query ,(format NIL "SELECT ~{~a~^,~} ~a" vars query) ,@args)
          do (progn ,@body)))
 
-(defun restore-sqlite (&key (file (sqlite-file)) (if-does-not-exist :error) restore-source-files)
-  ;; FIXME: add a "ignore if exists" option for releases
-  (do-select (id name source_directory disabled) ("FROM projects")
-    (let* ((sources ())
-           (project (ensure-instance (project name) 'project :name name :source-directory source_directory)))
-      (do-select (type url initargs) ("FROM project_sources WHERE project=?" id)
-        (push (list* type url (read-from-string initargs))
-              sources))
-      (ensure-instance project 'project
-                       :disabled-p (< 0 disabled)
-                       :excluded-systems (query1 "SELECT system FROM project_excluded_systems WHERE project=?" id)
-                       :excluded-paths (query1 "SELECT path FROM project_excluded_paths WHERE project=?" id)
-                       :sources sources)
-      (setf (project (name project)) project)
-      (do-select (id version archive_md5 source_sha1) ("FROM project_releases WHERE project=?" id)
-        (let ((systems ()))
-          (do-select (id name file) ("FROM project_release_systems WHERE project_release=?" id)
-            (push (list name :file file :dependencies (query1 "SELECT dependency FROM project_release_system_dependencies WHERE system=?" id))
-                  systems))
-          (pushnew (ensure-release (list version
-                                         :archive-md5 archive_md5
-                                         :source-sha1 source_sha1
-                                         :source-files (when restore-source-files
-                                                         (query1 "SELECT path FROM project_release_source_files WHERE project_release=?" id))
-                                         :systems systems)
-                                   project)
-                   (releases project))))))
+(defmethod retrieve ((*storage* sqlite) (object (eql 'dist)) (all (eql T)))
   (do-select (id name url) ("FROM dists")
-    (let ((dist (ensure-instance (dist name) 'timestamp-versioned-dist
-                                 :name name :url url
-                                 :projects (query1 "SELECT p.name FROM projects AS p INNER JOIN dist_projects AS dp ON p.ID = dp.project WHERE dp.dist = ?" id)
-                                 :excluded-paths (query1 "SELECT path FROM dist_excluded_paths WHERE dist=?" id))))
-      (setf (dist (name dist)) dist)
-      (do-select (id version timestamp) ("FROM dist_releases WHERE dist=?" id)
-        (pushnew (ensure-release (list version
-                                       :timestamp timestamp
-                                       :projects (loop for (name version) in (query "SELECT p.name,pr.version FROM projects AS p
-                                                                 INNER JOIN project_releases AS pr ON p.ID = pr.project
-                                                                 INNER JOIN dist_release_projects AS dr ON pr.ID = dr.project_release 
-                                                                 WHERE dr.dist_release = ?" id)
-                                                       collect (find-release version (project name))))
-                                 dist)
-                 (releases dist))))))
+    (let ((object (ensure-instance (gethash name *dists*) 'dist
+                                   :id id :name name :url url)))
+      (setf (dist name) object))))
+
+(defmethod retrieve ((*storage* sqlite) (object (eql 'dist)) (name string))
+  (destructuring-bind (id name url) (or (query1 "SELECT id,name,url FROM dists WHERE name = ?" name)
+                                        (return-from retrieve NIL))
+    (let ((object (ensure-instance (gethash name *dists*) 'dist
+                                   :id id :name name :url url)))
+      (setf (dist name) object))))
+
+(defmethod retrieve ((*storage* sqlite) (object dist) (slot (eql 'projects)))
+  (setf (excluded-paths object) (query1 "SELECT path FROM dist_excluded_paths WHERE dist=?" (id object))))
+
+(defmethod retrieve ((*storage* sqlite) (object dist) (slot (eql 'excluded-paths)))
+  (setf (projects object) (query1 "SELECT p.name FROM projects AS p INNER JOIN dist_projects AS dp ON p.ID = dp.project WHERE dp.dist = ?" (id object))))
+
+(defmethod retrieve ((*storage* sqlite) (object dist) (slot (eql 'releases)))
+  (let ((releases (if (slot-boundp object slot) (slot-value object slot) ())))
+    (do-select (id version timestamp) ("FROM dist_releases WHERE dist=?" (id object))
+      (pushnew (ensure-instance (find id releases :key #'id) 'release
+                                :id id :dist object :version version :timestamp timestamp)
+               releases))
+    (setf (releases object) releases)))
+
+(defmethod retrieve ((*storage* sqlite) (object release) (slot (eql 'projects)))
+  (setf (projects object)
+        (loop for (name version) in (query "SELECT p.name,pr.version FROM projects AS p
+                                            INNER JOIN project_releases AS pr ON p.ID = pr.project
+                                            INNER JOIN dist_release_projects AS dr ON pr.ID = dr.project_release 
+                                            WHERE dr.dist_release = ?" (id object))
+              collect (find-release version (project name)))))
+
+(defmethod retrieve ((*storage* sqlite) (object (eql 'project)) (all (eql T)))
+  (do-select (id name source_directory disabled) ("FROM projects")
+    (let ((object (ensure-instance (gethash name *projects*) 'project
+                                   :id id :name name :source-directory source_directory :disabled-p (< 0 disabled))))
+      (setf (project name) object))))
+
+(defmethod retrieve ((*storage* sqlite) (object (eql 'project)) (name string))
+  (destructuring-bind (id name source-directory disabled) (or (query1 "SELECT id,name,source_directory,disabled FROM projects WHERE name = ?" name)
+                                                              (return-from retrieve NIL))
+    (let ((object (ensure-instance (gethash name *projects*) 'project
+                                   :id id :name name :source-directory source-directory :disabled-p (< 0 disabled))))
+      (setf (project name) object))))
+
+(defmethod retrieve ((*storage* sqlite) (object project) (slot (eql 'sources)))
+  (let ((sources ()))
+    (do-select (type url initargs) ("FROM project_sources WHERE project=?" (id object))
+      (push (list* type url (read-from-string initargs)) sources))
+    (setf (sources object) sources)))
+
+(defmethod retrieve ((*storage* sqlite) (object project) (slot (eql 'excluded-systems)))
+  (setf (excluded-systems object) (query1 "SELECT system FROM project_excluded_systems WHERE project=?" (id object))))
+
+(defmethod retrieve ((*storage* sqlite) (object project) (slot (eql 'excluded-paths)))
+  (setf (excluded-paths object) (query1 "SELECT path FROM project_excluded_paths WHERE project=?" (id object))))
+
+(defmethod retrieve ((*storage* sqlite) (object project) (slot (eql 'releases)))
+  (let ((releases (if (slot-boundp object slot) (slot-value object slot) ())))
+    (do-select (id version archive_md5 source_sha1) ("FROM project_releases WHERE project=?" (id object))
+      (pushnew (ensure-instance (find id releases :key #'id) 'project-release
+                                :id id :project object :version version :archive-md5 archive_md5 :source-sha1 source_sha1)
+               releases))
+    (setf (releases object) releases)))
+
+(defmethod retrieve ((*storage* sqlite) (object project-release) (slot (eql 'source-files)))
+  (setf (source-files object) (query1 "SELECT path FROM project_release_source_files WHERE project_release=?" (id object))))
+
+(defmethod retrieve ((*storage* sqlite) (object project-release) (slot (eql 'systems)))
+  (let ((systems (if (slot-boundp object slot) (slot-value object slot) ())))
+    (do-select (id name file) ("FROM project_release_systems WHERE project_release=?" (id object))
+      (pushnew (ensure-instance (find id systems :key #'id) 'system
+                                :id id :name name :project object :file file :dependencies (query1 "SELECT dependency FROM project_release_system_dependencies WHERE system=?" id))
+               systems))
+    (setf (systems object) systems)))
 
 (defun update-sqlite (table ids values &key (if-exists :update))
   (let ((id (apply #'sqlite:execute-single *sqlite* (format NIL "SELECT ID FROM ~a WHERE ~{~a=?~^ AND ~}" table ids)

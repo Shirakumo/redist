@@ -58,8 +58,10 @@
    (excluded-paths :initarg :excluded-paths :accessor excluded-paths)))
 
 (defmethod shared-initialize :after ((dist dist) slots &key (projects NIL projects-p) (releases NIL releases-p))
-  (when projects-p (setf (projects dist) projects))
-  (when releases-p (setf (releases dist) releases)))
+  (when projects-p
+    (setf (projects dist) projects))
+  (when releases-p
+    (setf (releases dist) releases)))
 
 (defmethod print-object ((dist dist) stream)
   (print-unreadable-object (dist stream :type T)
@@ -221,14 +223,17 @@ Versions:~12t~a~%"
    (excluded-systems :initarg :excluded-systems :accessor excluded-systems)
    (excluded-paths :initarg :excluded-paths :accessor excluded-paths)
    (releases :accessor releases)
-   (version-cache :accessor version-cache)))
+   (version-cache :initform NIL :accessor version-cache)))
 
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory (verbose T))
-  (when source-directory (setf (source-directory project) (uiop:truenamize (absolutize source-directory (default-source-directory)))))
-  (unless (slot-boundp project 'source-directory)
+  (when source-directory
+    (setf (source-directory project) (uiop:truenamize (absolutize source-directory (default-source-directory)))))
+  (when (and (not (slot-boundp project 'source-directory)) (stored-p project))
     (setf (source-directory project) (pathname-utils:subdirectory (default-source-directory) (name project))))
-  (when releases-p (setf (releases project) releases))
-  (when sources-p (setf (sources project) sources))
+  (when releases-p
+    (setf (releases project) releases))
+  (when sources-p
+    (setf (sources project) sources))
   (when (and (sources project)
              (not (disabled-p project))
              (or (not (probe-file (source-directory project)))
@@ -390,7 +395,7 @@ Versions:~12t~a~%"
 
 (defmethod initialize-instance :after ((release release) &key dist update verbose (projects NIL projects-p))
   (declare (ignore projects))
-  (unless projects-p
+  (when (and (not projects-p) (not (stored-p release)))
     (setf (projects release)
           (do-list* (project (remove-if #'disabled-p (projects dist)))
             (make-release project :update update :verbose verbose)))))
@@ -476,17 +481,18 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
    (source-sha1 :initform NIL :initarg :source-sha1 :accessor source-sha1)))
 
 (defmethod initialize-instance :after ((release project-release) &key)
-  (unless (slot-boundp release 'source-files)
-    (setf (source-files release) T))
-  (unless (source-sha1 release)
-    (setf (source-sha1 release) (digest (source-files release) :sha1)))
-  (unless (slot-boundp release 'systems)
-    (setf (systems release) T))
-  (pushnew release (releases (project release))))
+  (unless (stored-p release)
+    (unless (slot-boundp release 'source-files)
+      (setf (source-files release) T))
+    (unless (source-sha1 release)
+      (setf (source-sha1 release) (digest (source-files release) :sha1)))
+    (unless (slot-boundp release 'systems)
+      (setf (systems release) T))))
 
 (defmethod shared-initialize :after ((release project-release) slot &key (systems NIL systems-p))
-  (when systems-p (setf (systems release) systems))
-  (when (slot-boundp release 'source-files)
+  (when systems-p
+    (setf (systems release) systems))
+  (when (and (slot-boundp release 'source-files) (not (stored-p release)))
     (loop for cons on (source-files release)
           do (setf (car cons) (absolutize (car cons) (source-directory (project release)))))))
 
@@ -577,14 +583,15 @@ Systems:~12t~a~%"
               syscalls winhttp package-locks sbcl-single-float-tran)
         :test #'string-equal))
 
-(defclass system ()
+(defclass system (stored-object)
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (name :initarg :name :initform (arg! :name) :accessor name)
    (file :initarg :file :initform (arg! :file) :accessor file)
    (dependencies :initarg :dependencies :initform (arg! :dependencies) :accessor dependencies)))
 
 (defmethod shared-initialize :after ((system system) slots &key (dependencies NIL dependencies-p))
-  (when dependencies-p (setf (dependencies system) dependencies))
+  (when dependencies-p
+    (setf (dependencies system) dependencies))
   (setf (name system) (string-downcase (name system)))
   (multiple-value-bind (absolute-p path) (pathname-utils:absolute-p (file system))
     (unless absolute-p

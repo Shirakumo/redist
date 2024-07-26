@@ -1,12 +1,6 @@
 (in-package #:org.shirakumo.redist)
 
 (defvar *distinfo-file* NIL)
-(defvar *dists* (make-hash-table :test 'equalp))
-(defvar *projects* (make-hash-table :test 'equalp))
-
-(defun clear ()
-  (clrhash *dists*)
-  (clrhash *projects*))
 
 (defun distinfo-file ()
   (or *distinfo-file*
@@ -15,30 +9,6 @@
       (when *default-output-directory*
         (merge-pathnames "../distinfo.lisp" *default-output-directory*))
       (merge-pathnames "dist/distinfo.lisp" (user-homedir-pathname))))
-
-(defmethod dist ((name symbol))
-  (dist (string name)))
-
-(defmethod dist ((name string))
-  (gethash name *dists*))
-
-(defmethod (setf dist) ((dist dist) (name symbol))
-  (setf (dist (string name)) dist))
-
-(defmethod (setf dist) ((dist dist) (name string))
-  (setf (gethash name *dists*) dist))
-
-(defun list-dists ()
-  (sort (alexandria:hash-table-values *dists*) #'string< :key #'name))
-
-(defmethod project ((name string))
-  (gethash name *projects*))
-
-(defmethod (setf project) ((project project) (name string))
-  (setf (gethash name *projects*) project))
-
-(defun list-projects ()
-  (sort (alexandria:hash-table-values *projects*) #'string< :key #'name))
 
 (defmacro define-project (name sources &body body)
   (form-fiddle:with-body-options (releases initargs) body
