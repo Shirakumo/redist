@@ -22,7 +22,8 @@
         (use *default-output-directory* "../distinfo.lisp")
         (use (user-homedir-pathname) "dist/distinfo.lisp"))))
 
-(defclass storage () ())
+(defclass storage ()
+  ((file :initarg :file :initform (arg! :file) :accessor file)))
 
 (defgeneric open-storage (file type))
 (defgeneric retrieve (storage object slot))

@@ -200,3 +200,16 @@
 
 (defun relpath (path parent)
   (namestring (pathname-utils:enough-pathname path parent)))
+
+(defun arg! (initarg)
+  (error "~s required." initarg))
+
+(defgeneric version< (a b)
+  (:method ((a real) (b real)) (< a b))
+  (:method ((a string) (b string)) (string< a b)))
+
+(defun version> (a b)
+  (version< b a))
+
+(defgeneric serialize (thing)
+  (:method-combination append :most-specific-last))

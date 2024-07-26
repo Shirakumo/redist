@@ -5,7 +5,7 @@
   (make-instance 'sqlite :file file))
 
 (defclass sqlite (storage)
-  ((file :initarg :file :initform (make-pathname :name "distinfo" :type "db" :defaults (storage-file)) :accessor file)
+  ((file :initform (make-pathname :name "distinfo" :type "db" :defaults (storage-file)))
    (connection :accessor connection)))
 
 (defmethod initialize-instance :after ((*storage* sqlite) &key (if-does-not-exist :create))
