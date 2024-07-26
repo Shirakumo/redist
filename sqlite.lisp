@@ -1,7 +1,11 @@
 (in-package #:org.shirakumo.redist)
 
+(defmethod open-storage ((file pathname) (type (eql :db)))
+  (cffi:load-foreign-library 'sqlite-ffi::sqlite3-lib)
+  (make-instance 'sqlite :file file))
+
 (defclass sqlite (storage)
-  ((file :initarg :file :initform (make-pathname :name "distinfo" :type "db" :defaults (distinfo-file)) :accessor file)
+  ((file :initarg :file :initform (make-pathname :name "distinfo" :type "db" :defaults (storage-file)) :accessor file)
    (connection :accessor connection)))
 
 (defmethod initialize-instance :after ((*storage* sqlite) &key (if-does-not-exist :create))

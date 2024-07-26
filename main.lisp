@@ -9,7 +9,7 @@
   `(let ((,val (envvar ,var)))
      (when ,val ,@body)))
 
-(defun create-update-script (&key (file (merge-pathnames "redist.lisp" *distinfo-file*)) (if-exists :supersede))
+(defun create-update-script (&key (file (merge-pathnames "redist.lisp" (storage-file))) (if-exists :supersede))
   (ensure-directories-exist file)
   (with-open-file (stream file :direction :output :if-exists if-exists)
     (with-standard-io-syntax
@@ -23,8 +23,8 @@
         (format stream "~&# |#~%~%")
         (format stream "~&#-quicklisp (load ~s)~%" (ql-impl-util::quicklisp-init-file-form))
         (format stream "~&(ql:quickload :redist :silent T)~%~%")
-        (when *distinfo-file*
-          (format stream "~&(setf org.shirakumo.redist:*distinfo-file* ~s)~%" *distinfo-file*))
+        (when *storage-file*
+          (format stream "~&(setf org.shirakumo.redist:*storage-file* ~s)~%" *storage-file*))
         (when *default-output-directory*
           (format stream "~&(setf org.shirakumo.redist:*default-output-directory* ~s)~%" *default-output-directory*))
         (when *default-source-directory*
@@ -116,15 +116,13 @@ DIST_OUTPUT_DIR       The base directory of the compiled
                       output. You'll want to point your webserver at
                       this. If unspecified, defaults to
                       DISTINFO_FILE/releases/
-DIST_DATABASE         The Sqlite database file that fulfils the same
-                      purpose as the DISTINFO_FILE. If unspecified
-                      defaults to
-                      DISTINFO_FILE/distinfo.db
-DISTINFO_FILE         The plain text file that defines dists,
-                      projects, and so on. If unspecified, defaults
-                      to, in order:
+STORAGE_FILE          The file that contains all dist storage info.
+                      If unspecified tries in order:
+                      DIST_SOURCE_DIR/../distinfo.db
                       DIST_SOURCE_DIR/../distinfo.lisp
+                      DIST_OUTPUT_DIR/../distinfo.db
                       DIST_OUTPUT_DIR/../distinfo.lisp
+                      ~~/dist/distinfo.db
                       ~~/dist/distinfo.lisp
 
 Database Info:
@@ -199,14 +197,12 @@ Please see https://shirakumo.org/projects/redist for more information.
          (format *error-output* "~
 Sources:~12t~a
 Output:~12t~a
-Distinfo:~12t~a
-Sqlite:~12t~a
+Storage:~12t~a
 Dists:~12t~{~a ~a~^~%~12t~}
 Projects:~12t~{~a ~a~^~%~12t~}~%"
                  (default-source-directory)
                  (default-output-directory)
-                 (distinfo-file)
-                 (sqlite-file)
+                 (storage-file)
                  (loop for dist in (list-dists)
                        collect (version dist) collect (name dist))
                  (loop for project in (list-projects)
@@ -288,35 +284,41 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
 
 (defun main (&optional (args (uiop:command-line-arguments)))
   (let ((args (or args '("help"))))
-    (handler-case
-        (handler-bind ((error (lambda (e)
-                                (when (uiop:getenv "REDIST_DEBUG")
-                                  (invoke-debugger e)))))
-          (destructuring-bind (command . args) args
-            (let ((cmdfun (find-symbol (format NIL "~a/~:@(~a~)" 'main command) #.*package*)))
-              (unless cmdfun
-                (error "No command named ~s." command))
-              (with-envvar (val "DIST_SOURCE_DIR")
-                (setf *default-source-directory* (pathname-utils:parse-native-namestring val :as :directory)))
-              (with-envvar (val "DIST_OUTPUT_DIR")
-                (setf *default-output-directory* (pathname-utils:parse-native-namestring val :as :directory)))
-              (with-envvar (val "DISTINFO_FILE")
-                (setf *distinfo-file* (pathname-utils:parse-native-namestring val :as :file)))
-              (with-envvar (val "DIST_DATABASE")
-                (setf *sqlite-file* (pathname-utils:parse-native-namestring val :as :file)))
-              (restore :if-does-not-exist NIL)
-              (when (ignore-errors (cffi:load-foreign-library 'sqlite-ffi::sqlite3-lib))
-                (restore-sqlite :if-does-not-exist NIL))
-              (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite :latest-only :skip-archives)
-                                                       :chars '(#\v :verbose #\u :update #\f :force
-                                                                #\d :dist #\p :project #\n :version
-                                                                #\n :name #\t :type #\x :overwrite
-                                                                #\j :jobs #\l :latest-only
-                                                                #\s :skip-archives)))
-              (store T T T))))
-      (error (e)
-        (format *error-output* "~&ERROR: ~a~%" e)
-        (uiop:quit 2)))
+    (handler-bind ((error
+                     (lambda (e)
+                       (cond ((uiop:getenv "REDIST_DEBUG")
+                              (invoke-debugger e))
+                             (T
+                              (format *error-output* "~&ERROR: ~a~%" e)
+                              (uiop:print-condition-backtrace e)
+                              (uiop:quit 2)))))
+                   (warning
+                     (lambda (e)
+                       (format *error-output* "~&WARNING: ~a~%" e)
+                       (muffle-warning e)))
+                   #+sbcl
+                   (sb-sys:interactive-interrupt
+                     (lambda (e)
+                       (format *error-output* "~&Interactive interrupt~%")
+                       (uiop:quit 1))))
+      (destructuring-bind (command . args) args
+        (let ((cmdfun (find-symbol (format NIL "~a/~:@(~a~)" 'main command) #.*package*)))
+          (unless cmdfun
+            (error "No command named ~s." command))
+          (with-envvar (val "DIST_SOURCE_DIR")
+            (setf *default-source-directory* (pathname-utils:parse-native-namestring val :as :directory)))
+          (with-envvar (val "DIST_OUTPUT_DIR")
+            (setf *default-output-directory* (pathname-utils:parse-native-namestring val :as :directory)))
+          (with-envvar (val "STORAGE_FILE")
+            (setf *storage-file* (pathname-utils:parse-native-namestring val :as :file)))
+          (try-open-storage)
+          (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite :latest-only :skip-archives)
+                                                   :chars '(#\v :verbose #\u :update #\f :force
+                                                            #\d :dist #\p :project #\n :version
+                                                            #\n :name #\t :type #\x :overwrite
+                                                            #\j :jobs #\l :latest-only
+                                                            #\s :skip-archives)))
+          (when *storage* (store T T T)))))
     (uiop:quit)))
 
 ;; Sigh.

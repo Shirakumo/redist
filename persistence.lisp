@@ -1,15 +1,5 @@
 (in-package #:org.shirakumo.redist)
 
-(defvar *distinfo-file* NIL)
-
-(defun distinfo-file ()
-  (or *distinfo-file*
-      (when *default-source-directory*
-        (merge-pathnames "../distinfo.lisp" *default-source-directory*))
-      (when *default-output-directory*
-        (merge-pathnames "../distinfo.lisp" *default-output-directory*))
-      (merge-pathnames "dist/distinfo.lisp" (user-homedir-pathname))))
-
 (defmacro define-project (name sources &body body)
   (form-fiddle:with-body-options (releases initargs) body
     (let ((name (string-downcase name)))

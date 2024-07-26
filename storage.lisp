@@ -2,12 +2,42 @@
 
 (defvar *dists* (make-hash-table :test 'equalp))
 (defvar *projects* (make-hash-table :test 'equalp))
-(defvar *storage*)
+(defvar *storage-file* NIL)
+(defvar *storage* NIL)
+
+(defun storage-file ()
+  (flet ((try (dir file)
+           (when dir (probe-file (merge-pathnames file dir))))
+         (use (dir file)
+           (when dir (merge-pathnames file dir))))
+    (or *storage-file*
+        (try *default-source-directory* "../distinfo.db")
+        (try *default-source-directory* "../distinfo.lisp")
+        (try *default-output-directory* "../distinfo.db")
+        (try *default-output-directory* "../distinfo.lisp")
+        (try (user-homedir-pathname) "dist/distinfo.db")
+        (try (user-homedir-pathname) "dist/distinfo.lisp")
+        ;; Default
+        (use *default-source-directory* "../distinfo.lisp")
+        (use *default-output-directory* "../distinfo.lisp")
+        (use (user-homedir-pathname) "dist/distinfo.lisp"))))
 
 (defclass storage () ())
 
+(defgeneric open-storage (file type))
 (defgeneric retrieve (storage object slot))
 (defgeneric store (storage object slot))
+
+(defmethod open-storage ((file string) type)
+  (open-storage (uiop:parse-native-namestring file) type))
+
+(defmethod open-storage ((pathname pathname) (type (eql T)))
+  (open-storage pathname (intern (string-upcase (pathname-type pathname)) "KEYWORD")))
+
+(defun try-open-storage (&optional (file (storage-file)))
+  (let ((truename (probe-file file)))
+    (when truename
+      (setf *storage* (open-storage truename T)))))
 
 (defclass stored-object ()
   ((id :initarg :id :writer (setf id))))
@@ -16,17 +46,17 @@
   (slot-boundp object 'id))
 
 (defmethod id ((object stored-object))
-  (unless (slot-boundp object 'id)
+  (when (and *storage* (not (slot-boundp object 'id)))
     (store *storage* object T))
   (slot-value object 'id))
 
 (defmethod c2mop:slot-value-using-class :before ((class c2mop:standard-class) (object stored-object) slotd)
   (unless (c2mop:slot-boundp-using-class class object slotd)
-    (retrieve *storage* object (c2mop:slot-definition-name slotd))))
+    (when *storage* (retrieve *storage* object (c2mop:slot-definition-name slotd)))))
 
 (defmethod (setf c2mop:slot-value-using-class) :before (value (class c2mop:standard-class) (object stored-object) slotd)
   (when (c2mop:slot-boundp-using-class class object slotd)
-    (store *storage* object (c2mop:slot-definition-name slotd))))
+    (when *storage* (store *storage* object (c2mop:slot-definition-name slotd)))))
 
 (defmethod retrieve ((storage storage) (object stored-object) slot))
 (defmethod store ((storage storage) (object stored-object) slot))
@@ -79,7 +109,7 @@
   (setf (gethash name *dists*) dist))
 
 (defun list-dists ()
-  (when (= 0 (hash-table-count *dists*))
+  (when (and *storage* (= 0 (hash-table-count *dists*)))
     (retrieve *storage* 'dist T))
   (sort (alexandria:hash-table-values *dists*) #'string< :key #'name))
 
@@ -91,6 +121,6 @@
   (setf (gethash name *projects*) project))
 
 (defun list-projects ()
-  (when (= 0 (hash-table-count *projects*))
+  (when (and *storage* (= 0 (hash-table-count *projects*)))
     (retrieve *storage* 'project T))
   (sort (alexandria:hash-table-values *projects*) #'string< :key #'name))

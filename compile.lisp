@@ -4,7 +4,7 @@
 
 (defun default-output-directory ()
   (or *default-output-directory*
-      (make-pathname :name NIL :type NIL :defaults (merge-pathnames "releases/" (distinfo-file)))))
+      (make-pathname :name NIL :type NIL :defaults (merge-pathnames "releases/" (storage-file)))))
 
 (defun write-dist-index (release stream)
   (format stream "name: ~(~a~)

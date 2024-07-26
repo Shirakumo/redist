@@ -29,7 +29,7 @@
 
 (defun default-source-directory ()
   (or *default-source-directory*
-      (make-pathname :name NIL :type NIL :defaults (merge-pathnames "sources/" (distinfo-file)))))
+      (make-pathname :name NIL :type NIL :defaults (merge-pathnames "sources/" (storage-file)))))
 
 (defgeneric make-release (thing &key))
 (defgeneric find-project (name dist))
