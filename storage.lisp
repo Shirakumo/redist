@@ -10,10 +10,15 @@
 (defgeneric store (storage object slot))
 
 (defclass stored-object ()
-  ((id :initarg :id :initform NIL :accessor id)))
+  ((id :initarg :id :writer (setf id))))
 
 (defmethod stored-p ((object stored-object))
-  (not (null (id object))))
+  (slot-boundp object 'id))
+
+(defmethod id ((object stored-object))
+  (unless (slot-boundp object 'id)
+    (store *storage* object T))
+  (slot-value object 'id))
 
 (defmethod c2mop:slot-value-using-class :before ((class c2mop:standard-class) (object stored-object) slotd)
   (unless (c2mop:slot-boundp-using-class class object slotd)
@@ -26,11 +31,35 @@
 (defmethod retrieve ((storage storage) (object stored-object) slot))
 (defmethod store ((storage storage) (object stored-object) slot))
 
+(defmethod retrieve ((storage storage) (all (eql T)) (all2 (eql T)))
+  (retrieve storage 'project T)
+  (retrieve storage 'dist T))
+
 (defmethod retrieve ((storage (eql T)) object slot)
   (retrieve *storage* object slot))
 
 (defmethod store ((storage (eql T)) object slot)
   (store *storage* object slot))
+
+(defmethod store :before ((storage storage) (object stored-object) slot)
+  (unless (or (stored-p object) (eql slot T))
+    (store storage object T)))
+
+(defmethod store :around ((storage storage) (object stored-object) slot)
+  (when (slot-boundp object slot) ; If we haven't retrieved the slot, we don't need to store it either.
+    (call-next-method)))
+
+(defmethod store ((storage storage) (all (eql T)) (all2 (eql T)))
+  (store storage 'project T)
+  (store storage 'dist T))
+
+(defmethod store ((storage storage) (type (eql 'project)) (all (eql T)))
+  (loop for object being the hash-values of *projects*
+        do (store storage object T)))
+
+(defmethod store ((storage storage) (type (eql 'dist)) (all (eql T)))
+  (loop for object being the hash-values of *dists*
+        do (store storage object T)))
 
 (defun clear ()
   (clrhash *dists*)

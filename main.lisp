@@ -155,14 +155,12 @@ Please see https://shirakumo.org/projects/redist for more information.
       (do-list* (dist (or (enlist dist) (list-dists)))
         (if overwrite
             (apply #'compile dist :version (version (first (releases dist))) args)
-            (apply #'compile dist args))))
-    (main-persist)))
+            (apply #'compile dist args))))))
 
 (defun main/update (&key version project verbose jobs)
   (with-kernel (when jobs (parse-integer jobs))
     (do-list* (project (or (enlist project) (list-projects)))
-      (update project :version version :verbose verbose))
-    (main-persist)))
+      (update project :version version :verbose verbose))))
 
 (defun main/list (&optional (thing "releases") &key project dist)
   (cond ((string-equal thing "projects")
@@ -220,8 +218,7 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
          (project (or (project name)
                       (make-instance 'project :name name :sources `((,type ,url))))))
     (dolist (dist (or (enlist dist) (list-dists)) (setf (project name) project))
-      (add-project project dist))
-    (main-persist)))
+      (add-project project dist))))
 
 (defun main/add-dist (name &key url)
   (let ((name (intern (string-upcase name) #.*package*)))
@@ -229,22 +226,19 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
       (error "A dist with this name already exists."))
     (when (or (null url) (string= "" url))
       (error "A canonical dist URL is required."))
-    (setf (dist name) (make-instance 'dist :name name :url url)))
-  (main-persist))
+    (setf (dist name) (make-instance 'dist :name name :url url))))
 
 (defun main/remove (name &key dist)
   (let ((project (or (project name)
                      (error "No project named ~s" name))))
     (dolist (dist (or (enlist dist) (list-dists)))
-      (remove-project project dist))
-    (main-persist)))
+      (remove-project project dist))))
 
 (defun main/replicate (url &key name verbose latest-only skip-archives)
   (replicate-dist url :name name
                       :verbose verbose
                       :current-version-only latest-only
-                      :download-archives (not skip-archives))
-  (main-persist))
+                      :download-archives (not skip-archives)))
 
 (defun main/archive (&key project dist version verbose)
   (labels ((package (release)
@@ -292,20 +286,6 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
                       (push arg pargs)))))
     (append (nreverse pargs) kargs)))
 
-(defun main-persist ()
-  (cond ((or (when (probe-file (sqlite-file))
-               (persist-sqlite) T)
-             (when (probe-file (distinfo-file))
-               (persist) T)))
-        ((and (cffi:foreign-library-loaded-p 'sqlite-ffi::sqlite3-lib)
-              (probe-file (pathname-utils:to-directory (sqlite-file))))
-         (persist-sqlite))
-        ((and (probe-file (pathname-utils:to-directory (distinfo-file))))
-         (persist))
-        (T
-         (error "Neither of~%  ~a~%  ~a~%exist. Cannot save database!"
-                (sqlite-file) (distinfo-file)))))
-
 (defun main (&optional (args (uiop:command-line-arguments)))
   (let ((args (or args '("help"))))
     (handler-case
@@ -332,7 +312,8 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
                                                                 #\d :dist #\p :project #\n :version
                                                                 #\n :name #\t :type #\x :overwrite
                                                                 #\j :jobs #\l :latest-only
-                                                                #\s :skip-archives))))))
+                                                                #\s :skip-archives)))
+              (store T T T))))
       (error (e)
         (format *error-output* "~&ERROR: ~a~%" e)
         (uiop:quit 2)))

@@ -197,3 +197,6 @@
                (unwind-protect (,thunk)
                  (lparallel:end-kernel)))
              (,thunk))))))
+
+(defun relpath (path parent)
+  (namestring (pathname-utils:enough-pathname path parent)))
