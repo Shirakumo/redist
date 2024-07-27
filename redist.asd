@@ -7,12 +7,7 @@
   :homepage "https://Shirakumo.github.io/redist/"
   :bug-tracker "https://github.com/Shirakumo/redist/issues"
   :source-control (:git "https://github.com/Shirakumo/redist.git")
-  :build-operation "program-op"
-  :build-pathname
-  #+windows "redist.exe"
-  #+darwin "redist.o"
-  #-(or darwin windows) "redist"
-  :entry-point "org.shirakumo.redist::main"
+  :in-order-to ((asdf:build-op (asdf:build-op :redist/standalone)))
   :serial T
   :components ((:file "package")
                (:file "toolkit")
@@ -22,13 +17,11 @@
                (:file "project")
                (:file "release")
                (:file "plaintext")
-               (:file "sqlite")
                (:file "sources")
                (:file "ql-support")
                (:file "compile")
                (:file "replicate")
                (:file "test")
-               (:file "main")
                (:file "documentation"))
   :depends-on (:ironclad
                :closer-mop
@@ -45,5 +38,18 @@
                :form-fiddle
                :documentation-utils
                :lparallel
-               :cl-ppcre
-               :sqlite))
+               :cl-ppcre))
+
+(asdf:defsystem redist/sqlite
+  :components ((:file "sqlite"))
+  :depends-on (:redist :sqlite))
+
+(asdf:defsystem redist/standalone
+  :build-operation "program-op"
+  :build-pathname
+  #+windows "redist.exe"
+  #+darwin "redist.o"
+  #-(or darwin windows) "redist"
+  :entry-point "org.shirakumo.redist::main"
+  :components ((:file "main"))
+  :depends-on (:uiop :redist :redist/sqlite))
