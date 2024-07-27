@@ -46,10 +46,7 @@
 
 (asdf:defsystem redist/standalone
   :build-operation "program-op"
-  :build-pathname
-  #+windows "redist.exe"
-  #+darwin "redist.o"
-  #-(or darwin windows) "redist"
+  :build-pathname "redist"
   :entry-point "org.shirakumo.redist::main"
   :components ((:file "main"))
   :depends-on (:uiop :redist :redist/sqlite))

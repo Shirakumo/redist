@@ -1,38 +1,71 @@
 name: build
+on: [create, workflow_dispatch]
 permissions:
   contents: write
-on: [create, workflow_dispatch]
-
 jobs:
   build:
     strategy:
       matrix:
-        platform: [ubuntu-latest]
+        platform: [ubuntu-latest, macOS-latest, windows-latest]
+      fail-fast: false
     runs-on: ${{ matrix.platform }}
+    env:
+      LISP: sbcl-bin
     steps:
+      - name: Restore cache
+        id: cache-ql
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.roswell
+            ~/.cache/common-lisp
+            ~/AppData/Local/cache
+          key: ${{ runner.os }}-ql
+      - name: Install Lisp
+        uses: 40ants/setup-lisp@v2
       - name: Install env
+        if: steps.cache-ql.outputs.cache-hit != 'true'
+        shell: lispsh -eo pipefail {0}
         run: |
-          sudo apt-get -qq install sbcl
-          curl -o ~/quicklisp.lisp https://beta.quicklisp.org/quicklisp.lisp
-          sbcl --load ~/quicklisp.lisp --eval '(quicklisp-quickstart:install)' --non-interactive
+          ros run -- --noinform \
+               --eval '(ql-dist:install-dist "http://dist.shirakumo.org/shirakumo.txt" :prompt NIL)' \
+               --non-interactive
+      - name: Fuck you GIT
+        if: runner.os == 'windows'
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
       - uses: actions/checkout@v1
       - name: Build the library
+        shell: lispsh -eo pipefail {0}
         run: |
-          sbcl --noinform \
-               --eval '(load "/home/runner/quicklisp/setup.lisp")' \
-               --eval '(asdf:load-asd "/home/runner/work/redist/redist/redist.asd")' \
-               --eval '(ql:quickload :redist)' \
+          ros run -- --noinform \
+               --eval "(push \"$GITHUB_WORKSPACE\" ql:*local-project-directories*)" \
+               --eval '(ql:quickload :redist/standalone)' \
                --non-interactive
       - name: Build the binary
+        shell: lispsh -eo pipefail {0}
         run: |
-          sbcl --noinform \
-               --eval '(load "/home/runner/quicklisp/setup.lisp")' \
-               --eval '(asdf:load-asd "/home/runner/work/redist/redist/redist.asd")' \
-               --eval '(asdf:make :redist)' \
+          ros run -- --noinform \
+               --eval "(push \"$GITHUB_WORKSPACE\" ql:*local-project-directories*)" \
+               --eval '(asdf:make :redist/standalone)' \
                --non-interactive
       - name: Create release ZIP
+        if: runner.os != 'windows'
+        shell: bash
         run: |
-          zip -r redist-linux.zip redist template
+          zip -r redist-${{ runner.os }}.zip redist template
+      - name: Make release ZIP
+        if: runner.os == 'windows'
+        shell: powershell
+        run: |
+          Compress-Archive -Path redist.exe,template -Destination redist-${{ runner.os }}.zip
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: redist-${{ runner.os }}
+          path: redist-${{ runner.os }}.zip
       - name: Create release
         id: create_release
         uses: ncipollo/release-action@v1
@@ -40,5 +73,4 @@ jobs:
         with:
           allowUpdates: true
           name: Release ${{ github.ref_name }}
-          artifacts: redist-linux.zip
-
+          artifacts: redist-${{ runner.os }}.zip
