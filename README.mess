@@ -57,7 +57,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/redist/redist compile -vuj
+ExecStart=/home/redist/redist compile -vuj 4
 WorkingDirectory=/home/redist
 User=redist
 Group=redist

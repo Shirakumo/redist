@@ -17,19 +17,63 @@
             (*print-case* :downcase)
             (*print-right-margin* 80)
             (*print-readably* NIL))
-        (format stream "~&#| Dist update script compiled automatically~%")
-        (format stream "~&exec ~a --noinform --load \"$0\" -- \"$@\"; exit~%"
-                (pathname-utils:native-namestring (truename (first (uiop:raw-command-line-arguments)))))
-        (format stream "~&# |#~%~%")
-        (format stream "~&#-quicklisp (load ~s)~%" (ql-impl-util::quicklisp-init-file-form))
-        (format stream "~&(ql:quickload :redist :silent T)~%~%")
-        (when *storage-file*
-          (format stream "~&(setf org.shirakumo.redist:*storage-file* ~s)~%" *storage-file*))
-        (when *default-output-directory*
-          (format stream "~&(setf org.shirakumo.redist:*default-output-directory* ~s)~%" *default-output-directory*))
-        (when *default-source-directory*
-          (format stream "~&(setf org.shirakumo.redist:*default-source-directory* ~s)~%" *default-source-directory*))
-        (format stream "~&(org.shirakumo.redist:main)~%"))))
+        (format stream "~
+#| Dist update script compiled automatically
+exec ~a --noinform --load \"$0\" -- \"$@\"
+#|
+#-quicklisp (load ~s)
+(ql:quickload :redist :silent T)
+(setf org.shirakumo.redist:*storage-file* ~s)
+(setf org.shirakumo.redist:*default-output-directory* ~s)
+(setf org.shirakumo.redist:*default-source-directory* ~s)
+(org.shirakumo.redist:main)"
+                (pathname-utils:native-namestring (truename (first (uiop:raw-command-line-arguments))))
+                (ql-impl-util::quicklisp-init-file-form)
+                (storage-file)
+                (default-output-directory)
+                (default-source-directory)))))
+  file)
+
+(defun self ()
+  (pathname-utils:native-namestring (truename (first (uiop:raw-command-line-arguments)))))
+
+(defun create-systemd-service (&key (file "/etc/systemd/system/redist.service") (if-exists :supersede) (binary (self)) (interval "monthly") enable)
+  (with-open-file (stream file :direction :output :if-exists if-exists)
+    (format stream "~
+[Unit]
+Description=Redist Distribution Compilation
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=~a compile -vuj 4
+WorkingDirectory=~a
+User=~a
+Group=~a
+Environment=DIST_SOURCE_DIR=~a
+Environment=DIST_OUTPUT_DIR=~a
+Environment=STORAGE_FILE=~a"
+            binary
+            (pathname-utils:native-namestring (uiop:getcwd))
+            #-sbcl "redist" #+sbcl (sb-posix:passwd-name (sb-posix:getpwuid (sb-posix:stat-uid (sb-posix:stat binary))))
+            #-sbcl "redist" #+sbcl (sb-posix:group-name (sb-posix:getgrgid (sb-posix:stat-uid (sb-posix:stat binary))))
+            (pathname-utils:native-namestring (default-source-directory))
+            (pathname-utils:native-namestring (default-output-directory))
+            (pathname-utils:native-namestring (storage-file))))
+  (with-open-file (stream (make-pathname :type "timer" :defaults file) :direction :output :if-exists if-exists)
+    (format stream "~
+[Unit]
+Description=Redist Releases
+
+[Timer]
+OnCalendar=~a
+Persistent=true
+
+[Install]
+WantedBy=timers.target"
+            interval))
+  (when enable
+    (uiop:run-program (list "systemctl" "enable" "redist.timer")))
   file)
 
 (defun main/help ()
@@ -103,6 +147,10 @@ archive               Update the release archives
   -d --dist dist         Update all archives of projects in the dist
      --version version   Update only the given version
   -v --verbose           To print verbose output about the progress
+
+install               Install a Systemd service. Requires root.
+  -i --interval interval Set the timer interval. Defaults to monthly
+  -e --enable            Enable the service
 
 help                  Shows this help listing
 
@@ -244,6 +292,9 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
       (mapc #'process (projects (or (dist dist)
                                     (error "No dist named ~s" dist)))))))
 
+(defun main/install (&key enable (interval "monthly"))
+  (create-systemd-service :enable enable :interval interval))
+
 (defun parse-args (args &key flags chars)
   (let ((kargs ())
         (pargs ()))
@@ -305,12 +356,13 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
           (with-envvar (val "STORAGE_FILE")
             (setf *storage-file* (pathname-utils:parse-native-namestring val :as :file)))
           (try-open-storage)
-          (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite :latest-only :skip-archives)
+          (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite :latest-only :skip-archives :enable)
                                                    :chars '(#\v :verbose #\u :update #\f :force
                                                             #\d :dist #\p :project #\n :version
                                                             #\n :name #\t :type #\x :overwrite
                                                             #\j :jobs #\l :latest-only
-                                                            #\s :skip-archives)))
+                                                            #\s :skip-archives
+                                                            #\i :interval #\e :enable)))
           (when *storage* (store T T T)))))
     (uiop:quit)))
 
