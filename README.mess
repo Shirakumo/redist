@@ -47,8 +47,6 @@ In the future to create a new dist release, you can simply invoke:
 
 To update all the projects, first. The ``-v`` flag prints output. You can also add ``-j 4`` or similar to speed up the process by running it on multiple threads.
 
-Depending on the availability of Sqlite, redist will save your data in a ``distinfo.db`` or in a lisp source file ``distinfo.lisp``. This data file is important to allow redist to create incremental releases.
-
 ## Quickstart (Lisp)
 Creating your own dist is rather simple:
 
@@ -68,11 +66,11 @@ This will create the ``dist`` object including ``project``s and clone their sour
 Once a dist is set up, you'll want to serialise its current configuration to disk to ensure you can restore it at a later point when you want to update it.
 
 :: common lisp
-(redist:persist) ; To save the info to disk
-(redist:restore) ; To restore the saved info
+(redist:store T T T)
+(redist:retrieve T T T)
 ::
 
-The serialisation produces standard Lisp code, so you can also edit and inspect the file as you like.
+This will save all the information to disk in a ``distinfo.lisp`` file and an accompanying directory of bits. The directory structure is important to allow it to load information lazily as it's needed. Over time, the entire history of a dist is stored that way, which can grow quite large. Lazy loading is important to make sure startup remains snappy.
 
 Once you have the dist set up with all the projects you'd like, it is time to make a release. To do so, simply call ``compile``.
 

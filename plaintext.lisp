@@ -4,7 +4,7 @@
   (make-instance 'plaintext :file file))
 
 (defclass plaintext (storage)
-  ((file :initform (make-pathname :name "distinfo" :type "db" :defaults (storage-file)))
+  ((file :initform (make-pathname :name "distinfo" :type "lisp" :defaults (storage-file)))
    (dir :accessor dir)
    (id-counter :initform 0 :accessor id-counter)))
 
@@ -17,7 +17,7 @@
         ((NIL) (return-from initialize-instance NIL))))
     (load file)
     (unless (slot-boundp *storage* 'dir)
-      (setf (dir *storage*) (merge-pathnames ".distinfo/" (make-pathname :name NIL :type NIL :defaults file))))))
+      (setf (dir *storage*) (merge-pathnames "distinfo/" (make-pathname :name NIL :type NIL :defaults file))))))
 
 (defmethod store :after ((*storage* plaintext) (all (eql T)) (all2 (eql T)))
   (with-open-file (stream (file *storage*) :direction :output :if-exists :supersede)

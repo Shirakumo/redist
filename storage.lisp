@@ -74,9 +74,13 @@
   (retrieve storage 'dist T))
 
 (defmethod retrieve ((storage (eql T)) object slot)
+  (unless *storage*
+    (setf *storage* (try-open-storage)))
   (retrieve *storage* object slot))
 
 (defmethod store ((storage (eql T)) object slot)
+  (unless *storage*
+    (setf *storage* (try-open-storage)))
   (store *storage* object slot))
 
 (defmethod store :before ((storage storage) (object stored-object) slot)
