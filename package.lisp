@@ -5,7 +5,9 @@
    (#:filesystem-utils #:org.shirakumo.filesystem-utils)
    (#:pathname-utils #:org.shirakumo.pathname-utils))
   ;; toolkit.lisp
-  (:export)
+  (:export
+   #:version<
+   #:serialize)
   ;; asdf.lisp
   (:export
    #:find-file-systems
@@ -13,13 +15,10 @@
    #:find-all-systems)
   ;; dist.lisp
   (:export
-   #:*default-source-directory*
-   #:*excluded-paths*
    #:make-release
    #:find-project
    #:find-release
    #:next-version
-   #:version<
    #:dist
    #:name
    #:url
@@ -29,11 +28,14 @@
    #:integer-versioned-dist
    #:timestamp-versioned-dist
    #:date-versioned-dist
-   #:source-manager
-   #:url
-   #:version
-   #:update
-   #:clone
+   #:define-dist)
+  ;; plaintext.lisp
+  (:export
+   #:plaintext
+   #:dir
+   #:id-counter)
+  ;; project.lisp
+  (:export
    #:project
    #:name
    #:source-directory
@@ -44,6 +46,10 @@
    #:releases
    #:remove-project
    #:add-project
+   #:define-project
+   #:quick-add-projects)
+  ;; release.lisp
+  (:export
    #:release
    #:dist
    #:version
@@ -69,23 +75,17 @@
    #:name
    #:file
    #:dependencies)
-  ;; persistence.lisp
-  (:export
-   #:*distinfo-file*
-   #:dist
-   #:project
-   #:serialize
-   #:persist
-   #:restore
-   #:define-project
-   #:define-dist
-   #:main)
   ;; replicate.lisp
   (:export
    #:replicate-dist
    #:replicate-dist-version)
   ;; sources.lisp
   (:export
+   #:source-manager
+   #:url
+   #:version
+   #:update
+   #:clone
    #:cvs
    #:svn
    #:darcs
@@ -95,6 +95,20 @@
    #:github
    #:gitlab
    #:dist-source)
+  ;; storage.lisp
+  (:export
+   #:storage-file
+   #:storage
+   #:file
+   #:open-storage
+   #:retrieve
+   #:store
+   #:list-storage-file-types
+   #:try-open-storage
+   #:stored-object
+   #:id
+   #:stored-p
+   #:retrieve-all)
   ;; ql-support.lisp
   (:export
    #:parse-quicklisp-source

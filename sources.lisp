@@ -1,5 +1,48 @@
 (in-package #:org.shirakumo.redist)
 
+(defclass source-manager ()
+  ((url :initarg :url :initform (arg! :url) :accessor url)))
+
+(defmethod print-object ((manager source-manager) stream)
+  (print-unreadable-object (manager stream :type T)
+    (format stream "~a" (url manager))))
+
+(defgeneric version (manager))
+(defgeneric update (manager &key))
+(defgeneric clone (manager &key))
+
+(defmethod clone :before ((manager source-manager) &key verbose)
+  (when verbose
+    (verbose "Cloning from ~a ~a" (type-of manager) (url manager))))
+
+(defmethod update :before ((manager source-manager) &key verbose version)
+  (when verbose
+    (if version
+        (verbose "Checking out to ~a" version)
+        (verbose "Updating from ~a" (url manager)))))
+
+(defmethod update :around ((manager source-manager) &key &allow-other-keys)
+  (with-simple-restart (continue "Ignore the update and continue as if it had happened.")
+    (call-next-method)))
+
+(defmethod version ((manager source-manager))
+  (digest (gather-sources simple-inferiors:*cwd*) :sha1))
+
+(defmethod ensure-source ((source source-manager))
+  source)
+
+(defmethod ensure-source ((spec cons))
+  (destructuring-bind (type url . initargs) spec
+    (etypecase type
+      ((or keyword string)
+       (setf type (or (find-symbol (string type) #.*package*)
+                      (error "No source type with name ~s found!" type))))
+      (symbol))
+    (apply #'make-instance type :url url initargs)))
+
+(defmethod serialize append ((source source-manager))
+  (list (type-of source) (url source)))
+
 (defclass cvs (source-manager)
   ())
 
