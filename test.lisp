@@ -1,5 +1,12 @@
 (in-package #:org.shirakumo.redist)
 
+(define-condition test-failure (error)
+  ((system :initarg :system :reader system)
+   (tester :initarg :tester :reader tester)
+   (report :initarg :report :initform NIL :reader report))
+  (:report (lambda (c s) (format s "Failed to test ~a with ~a~@[:~%~%~a~]"
+                                 (name (system c)) (tester c) (report c)))))
+
 (defvar *default-tester*)
 
 (defclass tester ()
@@ -11,22 +18,22 @@
   (apply #'test *default-tester* thing args))
 
 (defmethod test ((tester tester) (project project) &rest args &key &allow-other-keys)
-  (dolist (system (systems project))
+  (do-list* (system (systems project))
     (with-simple-restart (continue "Ignore the failing system.")
       (apply #'test tester system args))))
 
 (defmethod test ((tester tester) (project project-release) &rest args &key &allow-other-keys)
-  (dolist (system (systems project))
+  (do-list* (system (systems project))
     (with-simple-restart (continue "Ignore the failing system.")
       (apply #'test tester system args))))
 
 (defmethod test ((tester tester) (release release) &rest args &key &allow-other-keys)
-  (dolist (project (projects release))
+  (do-list* (project (projects release))
     (with-simple-restart (continue "Ignore the failing project.")
       (apply #'test tester project args))))
 
 (defmethod test ((tester tester) (dist dist) &rest args &key &allow-other-keys)
-  (dolist (project (projects dist))
+  (do-list* (project (projects dist))
     (when (active-p project)
       (restart-case (apply #'test tester project args)
         (deactivate ()
@@ -37,29 +44,52 @@
           (declare (ignore e))
           NIL)))))
 
+(defclass program-tester (tester)
+  ())
+
+(defgeneric program (program-tester))
+(defgeneric load-arguments (program-tester file))
+
+(defun write-test-file (file system &key (source-directory #p "~/dist/sources/") (cache-directory #p "~/dist/asdf-cache/") run-tests verbose)
+  (when verbose
+    (verbose "Writing test file for ~a to ~a" (name system) file))
+  (with-open-file (stream file :direction :output :if-exists :supersede)
+    (with-standard-io-syntax
+      (dolist (form `((require :asdf)
+                      (asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration (:tree ,(pathname-utils:native-namestring source-directory))))
+                      (asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(pathname-utils:native-namestring cache-directory) :implementation ,(name system)))))
+                      (asdf:load-system ',(name system))
+                      ,@(when run-tests
+                          `((setf cl-user::*exit-on-test-failures* T) ; Not standardised.
+                            (asdf:test-system ',(name system))))))
+        (pprint form stream)
+        (terpri stream)))))
+
+(defmethod test ((tester program-tester) (system system) &rest args &key verbose)
+  (uiop:with-temporary-file (:pathname file :prefix (type-of tester) :suffix (name system) :type "lisp")
+    (apply #'write-test-file file system args)
+    (handler-case (test tester file :verbose verbose)
+      (test-failure (c)
+        (error 'test-failure :tester tester :system system :report (report c))))))
+
+(defmethod test ((tester program-tester) (file pathname) &key verbose)
+  (let* ((output (make-string-output-stream))
+         (target (if verbose (make-broadcast-stream output *standard-output*) output)))
+    (when (< 0 (simple-inferiors:run (program tester) (load-arguments tester (pathname-utils:native-namestring file))
+                                     :output target :error target))
+      (error 'test-failure :tester tester :report (get-output-stream-string output)))))
+
 (defclass sbcl (tester)
   ())
 
-(defun form-string (form)
-  (with-standard-io-syntax
-    (prin1-to-string form)))
+(defmethod program ((sbcl sbcl))
+  #+windows "sbcl.exe"
+  #-windows "sbcl")
 
-(defmethod test ((tester sbcl) (system system) &key (source-directory #p "~/dist/sources/") (cache-directory #p "~/dist/cache/") verbose run-tests)
-  (let* ((output (make-string-output-stream))
-         (target (if verbose (make-broadcast-stream output *standard-output*) output)))
-    (when (< 0 (simple-inferiors:run #+windows "sbcl.exe" #-windows "sbcl"
-                                     (list "--dynamic-space-size" "8Gb" "--noinform" "--disable-ldb" "--lose-on-corruption" "--end-runtime-options"
-                                           "--no-sysinit" "--no-userinit" "--disable-debugger"
-                                           "--eval" "(require :asdf)"
-                                           "--eval" (form-string `(asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration (:tree ,(namestring source-directory)))))
-                                           "--eval" (form-string `(asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(namestring cache-directory) :implementation)))))
-                                           "--eval" (form-string `(asdf:load-system ',(name system)))
-                                           "--eval" (form-string `(setf cl-user::*exit-on-test-failures* T)) ; Not standardised.
-                                           ;; FIXME: How do we determine test alias systems from regulars? We don't want to test the same thing twice.
-                                           "--eval" (if run-tests (form-string `(asdf:test-system ',(name system))) "()")
-                                           "--quit")
-                                     :output target :error target))
-      (error "Testing~%  ~a~%failed:~%~%~a" system (get-output-stream-string output)))))
+(defmethod load-arguments ((sbcl sbcl) file)
+  (list "--dynamic-space-size" "8Gb" "--disable-ldb" "--lose-on-corruption" "--end-runtime-options"
+        "--no-sysinit" "--no-userinit" "--disable-debugger"
+        "--load" (uiop:native-namestring file) "--quit"))
 
 (unless (boundp '*default-tester*)
   (setf *default-tester* (make-instance 'sbcl)))
