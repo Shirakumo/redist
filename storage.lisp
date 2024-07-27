@@ -8,20 +8,16 @@
 
 (defun storage-file ()
   (flet ((try (dir file)
-           (when dir (probe-file (merge-pathnames file dir))))
-         (use (dir file)
            (when dir (merge-pathnames file dir))))
-    (or *storage-file*
-        (try *default-source-directory* "../distinfo.db")
-        (try *default-source-directory* "../distinfo.lisp")
-        (try *default-output-directory* "../distinfo.db")
-        (try *default-output-directory* "../distinfo.lisp")
-        (try (user-homedir-pathname) "dist/distinfo.db")
-        (try (user-homedir-pathname) "dist/distinfo.lisp")
-        ;; Default
-        (use *default-source-directory* "../distinfo.lisp")
-        (use *default-output-directory* "../distinfo.lisp")
-        (use (user-homedir-pathname) "dist/distinfo.lisp"))))
+    (let ((dirs (list (try *default-source-directory* "../")
+                      (try *default-output-directory* "../")
+                      (try (user-homedir-pathname) "dist/"))))
+      (or *storage-file*
+          (loop for dir in dirs
+                thereis (loop for type in (list-storage-file-types)
+                              thereis (probe-file (make-pathname :name "distinfo" :type type :defaults dir))))
+          (loop for dir in dirs
+                thereis dir)))))
 
 (defclass storage ()
   ((file :initarg :file :initform (arg! :file) :accessor file)))
@@ -29,6 +25,12 @@
 (defgeneric open-storage (file type))
 (defgeneric retrieve (storage object slot))
 (defgeneric store (storage object slot))
+
+(defun list-storage-file-types ()
+  (loop for method in (c2mop:generic-function-methods #'open-storage)
+        for type = (second (c2mop:method-specializers method))
+        when (and (typep type 'c2mop:eql-specializer) (not (eql T (c2mop:eql-specializer-object type))))
+        collect (string-downcase (c2mop:eql-specializer-object type))))
 
 (defmethod open-storage ((file string) type)
   (open-storage (pathname-utils:parse-native-namestring file) type))
