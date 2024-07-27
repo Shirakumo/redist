@@ -47,6 +47,40 @@ In the future to create a new dist release, you can simply invoke:
 
 To update all the projects, first. The ``-v`` flag prints output. You can also add ``-j 4`` or similar to speed up the process by running it on multiple threads.
 
+## Systemd Service
+On most Linux systems you can set up a Systemd service file like ``/etc/systemd/system/redist.service``
+
+::
+[Unit]
+Description=Redist Distribution Compilation
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/redist/redist compile -vuj
+WorkingDirectory=/home/redist
+User=redist
+Group=redist
+::
+
+Assuming there's a ``redist`` user that holds the ``redist`` binary and all the data. You can then trigger a recompile via ``systemctl start redist``.
+
+If you want to automatically rather than manually trigger compiles, you can also create a timer file like ``/etc/systemd/system/redist.timer``
+
+::
+[Unit]
+Description=Redist Releases
+
+[Timer]
+OnCalendar=monthly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+::
+
+And enable it via ``systemctl enable redist.timer``. Now an automatic release will be triggered every month.
+
 ## Quickstart (Lisp)
 Creating your own dist is rather simple:
 
