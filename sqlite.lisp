@@ -67,16 +67,16 @@
       (setf (dist name) object))))
 
 (defmethod retrieve ((*storage* sqlite) (object (eql 'dist)) (name string))
-  (destructuring-bind (id name url) (or (query1 "SELECT id,name,url FROM dists WHERE name = ?" name)
+  (destructuring-bind (id name url) (or (first (query "SELECT id,name,url FROM dists WHERE name = ?" name))
                                         (return-from retrieve NIL))
     (let ((object (ensure-instance (gethash name *dists*) 'dist
                                    :id id :name name :url url)))
       (setf (dist name) object))))
 
-(defmethod retrieve ((*storage* sqlite) (object dist) (slot (eql 'projects)))
+(defmethod retrieve ((*storage* sqlite) (object dist) (slot (eql 'excluded-paths)))
   (setf (excluded-paths object) (query1 "SELECT path FROM dist_excluded_paths WHERE dist=?" (id object))))
 
-(defmethod retrieve ((*storage* sqlite) (object dist) (slot (eql 'excluded-paths)))
+(defmethod retrieve ((*storage* sqlite) (object dist) (slot (eql 'projects)))
   (setf (projects object) (query1 "SELECT p.name FROM projects AS p INNER JOIN dist_projects AS dp ON p.ID = dp.project WHERE dp.dist = ?" (id object))))
 
 (defmethod retrieve ((*storage* sqlite) (object dist) (slot (eql 'releases)))
@@ -102,7 +102,7 @@
       (setf (project name) object))))
 
 (defmethod retrieve ((*storage* sqlite) (object (eql 'project)) (name string))
-  (destructuring-bind (id name source-directory disabled) (or (query1 "SELECT id,name,source_directory,disabled FROM projects WHERE name = ?" name)
+  (destructuring-bind (id name source-directory disabled) (or (first (query "SELECT id,name,source_directory,disabled FROM projects WHERE name = ?" name))
                                                               (return-from retrieve NIL))
     (let ((object (ensure-instance (gethash name *projects*) 'project
                                    :id id :name name :source-directory source-directory :disabled-p (< 0 disabled))))
@@ -206,7 +206,7 @@
 (defmethod store ((*storage* sqlite) (object project-release) (slot (eql 'source-files)))
   (refill "project_release_source_files" :project_release (id object) :path
           (loop for path in (source-files object)
-                collect (relpath path (source-directory object)))))
+                collect (relpath path (source-directory (project object))))))
 
 (defmethod store ((*storage* sqlite) (object project-release) (slot (eql 'systems)))
   (dolist (system (systems object))
@@ -214,7 +214,7 @@
 
 (defmethod store ((*storage* sqlite) (object system) (all (eql T)))
   (setf (id object) (update-sqlite "project_release_systems" '(:project_release :name)
-                                   (list :project-release (id (project object))
+                                   (list :project_release (id (project object))
                                          :name (name object)
                                          :file (namestring (file object)))))
   (store *storage* object 'dependencies))

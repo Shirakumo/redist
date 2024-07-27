@@ -184,3 +184,6 @@ Versions:~12t~a~%"
                       (error "No source type with name ~s found!" type))))
       (symbol))
     (apply #'make-instance type :url url initargs)))
+
+(defmethod serialize append ((source source-manager))
+  (list (type-of source) (url source)))

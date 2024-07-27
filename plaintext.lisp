@@ -17,10 +17,10 @@
         ((NIL) (return-from initialize-instance NIL))))
     (load file)
     (unless (slot-boundp *storage* 'dir)
-      (setf (dir *storage*) (merge-pathanmes ".distinfo/" (make-pathname :name NIL :type NIL :defaults file))))))
+      (setf (dir *storage*) (merge-pathnames ".distinfo/" (make-pathname :name NIL :type NIL :defaults file))))))
 
 (defmethod store :after ((*storage* plaintext) (all (eql T)) (all2 (eql T)))
-  (with-open-file (stream file :direction :output :if-exists :supersede)
+  (with-open-file (stream (file *storage*) :direction :output :if-exists :supersede)
     (with-standard-io-syntax
       (let ((*package* #.*package*)
             (*print-case* :downcase)
@@ -28,8 +28,8 @@
             (*print-readably* NIL))
         (format stream "~&;;;;; Distinfo compiled automatically")
         (terpri stream) (pprint `(in-package #.(package-name *package*)) stream)
-        (terpri stream) (pprint `(setf (id-counter *storage*) ,(id-counter *storage*)))
-        (terpri stream) (pprint `(setf (dir *storage*) ,(dir *storage*)))
+        (terpri stream) (pprint `(setf (id-counter *storage*) ,(id-counter *storage*)) stream)
+        (terpri stream) (pprint `(setf (dir *storage*) ,(dir *storage*)) stream)
         (terpri stream)))))
 
 (defmethod store :before ((*storage* plaintext) (object stored-object) (slot (eql T)))
@@ -45,6 +45,7 @@
 
 (defun store-plaintext (object &rest fields)
   (let ((file (plaintext-file (type-of object) (id object))))
+    (ensure-directories-exist file)
     (with-open-file (stream file :direction :output :if-exists :supersede)
       (with-standard-io-syntax
         (let ((*package* #.*package*)
@@ -58,6 +59,7 @@
 
 (defun store-slot (object slot value)
   (let ((file (plaintext-file (type-of object) (id object) slot)))
+    (ensure-directories-exist file)
     (with-open-file (stream file :direction :output :if-exists :supersede)
       (with-standard-io-syntax
         (let ((*package* #.*package*)
@@ -167,8 +169,6 @@
   (store *storage* object 'projects))
 
 (defmethod store ((*storage* plaintext) (object release) (slot (eql 'projects)))
-  (dolist (project (projects object))
-    (store *storage* project T))
   (store-slot object slot (mapcar #'id (projects object))))
 
 (defmethod store ((*storage* plaintext) (object project) (all (eql T)))
@@ -202,9 +202,9 @@
                    :archive-md5 (archive-md5 object)
                    :source-sha1 (source-sha1 object)
                    :systems (loop for system in (systems object)
-                                  collect (list :name (name object)
-                                                :file (file object)
-                                                :dependencies (dependencies object))))
+                                  collect (list :name (name system)
+                                                :file (file system)
+                                                :dependencies (dependencies system))))
   (store *storage* object 'source-files))
 
 (defmethod store ((*storage* plaintext) (object project-release) (slot (eql 'source-files)))

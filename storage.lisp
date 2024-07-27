@@ -4,6 +4,7 @@
 (defvar *projects* (make-hash-table :test 'equalp))
 (defvar *storage-file* NIL)
 (defvar *storage* NIL)
+(defvar *retrieving* NIL)
 
 (defun storage-file ()
   (flet ((try (dir file)
@@ -52,12 +53,16 @@
   (slot-value object 'id))
 
 (defmethod c2mop:slot-value-using-class :before ((class c2mop:standard-class) (object stored-object) slotd)
-  (unless (c2mop:slot-boundp-using-class class object slotd)
-    (when *storage* (retrieve *storage* object (c2mop:slot-definition-name slotd)))))
+  (when (and *storage* (not (c2mop:slot-boundp-using-class class object slotd)))
+    (retrieve *storage* object (c2mop:slot-definition-name slotd))))
 
 (defmethod (setf c2mop:slot-value-using-class) :before (value (class c2mop:standard-class) (object stored-object) slotd)
-  (when (c2mop:slot-boundp-using-class class object slotd)
-    (when *storage* (store *storage* object (c2mop:slot-definition-name slotd)))))
+  (when (and *storage* (not *retrieving*) (c2mop:slot-boundp-using-class class object slotd))
+    (store *storage* object (c2mop:slot-definition-name slotd))))
+
+(defmethod retrieve :around ((storage storage) (object stored-object) slot)
+  (let ((*retrieving* T))
+    (call-next-method)))
 
 (defmethod retrieve ((storage storage) (object stored-object) slot))
 (defmethod store ((storage storage) (object stored-object) slot))
@@ -77,7 +82,8 @@
     (store storage object T)))
 
 (defmethod store :around ((storage storage) (object stored-object) slot)
-  (when (slot-boundp object slot) ; If we haven't retrieved the slot, we don't need to store it either.
+  (when (or (eql slot T) (slot-boundp object slot))
+    ;; If we haven't retrieved the slot, we don't need to store it either.
     (call-next-method)))
 
 (defmethod store ((storage storage) (all (eql T)) (all2 (eql T)))
@@ -125,3 +131,39 @@
   (when (and *storage* (= 0 (hash-table-count *projects*)))
     (retrieve *storage* 'project T))
   (sort (alexandria:hash-table-values *projects*) #'string< :key #'name))
+
+(defmethod retrieve-all ((defalut (eql T)) thing)
+  (retrieve-all *storage* thing))
+
+(defmethod retrieve-all ((storage storage) (all (eql T)))
+  (retrieve-all storage 'project)
+  (retrieve-all storage 'dist))
+
+(defmethod retrieve-all ((storage storage) (dists (eql 'dist)))
+  (retrieve storage 'dist T)
+  (loop for object being the hash-values of *dists*
+        do (retrieve-all storage object)))
+
+(defmethod retrieve-all ((storage storage) (dists (eql 'project)))
+  (retrieve storage 'project T)
+  (loop for object being the hash-values of *projects*
+        do (retrieve-all storage object)))
+
+(defmethod retrieve-all ((storage storage) (object stored-object))
+  (retrieve storage object T)
+  (loop for slot in (c2mop:class-slots (class-of object))
+        for name = (c2mop:slot-definition-name slot)
+        do (when (loop for method in (compute-applicable-methods #'retrieve (list storage object name))
+                       thereis (loop for arg in (c2mop:method-specializers method)
+                                     thereis (typep arg 'c2mop:eql-specializer)))
+             (retrieve storage object name))))
+
+(defmethod retrieve-all :after ((storage storage) (object project))
+  (dolist (object (releases object))
+    (retrieve-all storage object)))
+
+(defmethod retrieve-all :after ((storage storage) (object dist))
+  (dolist (object (releases object))
+    (retrieve-all storage object))
+  (dolist (object (projects object))
+    (retrieve-all storage object)))
