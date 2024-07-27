@@ -226,3 +226,6 @@ Systems:~12t~a~%"
 (defmethod find-system (name (system system))
   (when (string-equal name (name system))
     system))
+
+(defmethod version ((system system))
+  (version (project system)))

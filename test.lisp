@@ -30,7 +30,7 @@
 (defmethod test ((tester tester) (release release) &rest args &key &allow-other-keys)
   (do-list* (project (projects release))
     (with-simple-restart (continue "Ignore the failing project.")
-      (apply #'test tester project args))))
+      (apply #'test tester (find-release (version release) project) args))))
 
 (defmethod test ((tester tester) (dist dist) &rest args &key &allow-other-keys)
   (do-list* (project (projects dist))
@@ -43,6 +43,9 @@
           :report "Skip the project and continue."
           (declare (ignore e))
           NIL)))))
+
+;; FIXME: how do we check out the specific dist state if the user requests to test a particular project-release or project?
+;;        we won't know how to check out that "universe" since there's no strictly associated dist release
 
 (defclass program-tester (tester)
   ())
@@ -57,7 +60,7 @@
     (with-standard-io-syntax
       (dolist (form `((require :asdf)
                       (asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration (:tree ,(pathname-utils:native-namestring source-directory))))
-                      (asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(pathname-utils:native-namestring cache-directory) :implementation ,(name system)))))
+                      (asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(pathname-utils:native-namestring cache-directory) :implementation))))
                       (asdf:load-system ',(name system))
                       ,@(when run-tests
                           `((setf cl-user::*exit-on-test-failures* T) ; Not standardised.
