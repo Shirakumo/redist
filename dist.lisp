@@ -144,3 +144,9 @@ Versions:~12t~a~%"
   (multiple-value-bind (s m h dd mm yy) (decode-universal-time (get-universal-time) 0)
     (declare (ignore s m h))
     (format NIL "~4,'0d-~2,'0d-~2,'0d" yy mm dd)))
+
+(defmethod retrieve-all :after ((storage storage) (object dist))
+  (dolist (object (releases object))
+    (retrieve-all storage object))
+  (dolist (object (projects object))
+    (retrieve-all storage object)))

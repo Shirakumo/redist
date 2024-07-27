@@ -216,3 +216,7 @@ Versions:~12t~a~%"
   (loop for url in urls
         for name = (url-extract-name url)
         collect (setf (project name) (ensure-instance (project name) 'project :name name :sources `((,source-type ,url))))))
+
+(defmethod retrieve-all :after ((storage storage) (object project))
+  (dolist (object (releases object))
+    (retrieve-all storage object)))

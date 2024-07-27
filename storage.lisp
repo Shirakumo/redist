@@ -164,12 +164,3 @@
                                      thereis (typep arg 'c2mop:eql-specializer)))
              (retrieve storage object name))))
 
-(defmethod retrieve-all :after ((storage storage) (object project))
-  (dolist (object (releases object))
-    (retrieve-all storage object)))
-
-(defmethod retrieve-all :after ((storage storage) (object dist))
-  (dolist (object (releases object))
-    (retrieve-all storage object))
-  (dolist (object (projects object))
-    (retrieve-all storage object)))
