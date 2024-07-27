@@ -97,6 +97,8 @@
    #:dist-source)
   ;; storage.lisp
   (:export
+   #:*storage*
+   #:*storage-file*
    #:storage-file
    #:storage
    #:file
