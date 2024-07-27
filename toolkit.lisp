@@ -62,8 +62,8 @@
                  :defaults (uiop:temporary-directory)))
 
 (defun file-match-p (file pattern)
-  (let ((file (uiop:unix-namestring file))
-        (string (uiop:unix-namestring pattern)))
+  (let ((file (pathname-utils:unix-namestring file))
+        (string (pathname-utils:unix-namestring pattern)))
     (if (pathname-utils:absolute-p pattern)
         (starts-with string file :start1 1)
         (loop for i = -1 then (position #\/ file :start i)

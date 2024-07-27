@@ -196,7 +196,7 @@ Versions:~12t~a~%"
     (find-system name (first (releases project)))))
 
 (defmethod url ((project project))
-  (format NIL "/~a" (uiop:unix-namestring (path project))))
+  (format NIL "/~a" (pathname-utils:unix-namestring (path project))))
 
 (defmethod path ((project project))
   (make-pathname :directory `(:relative "archives" ,(name project))))

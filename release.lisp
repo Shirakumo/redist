@@ -179,7 +179,7 @@ Systems:~12t~a~%"
   (name (project release)))
 
 (defmethod url ((release project-release))
-  (format NIL "/~a" (uiop:unix-namestring (path release))))
+  (format NIL "/~a" (pathname-utils:unix-namestring (path release))))
 
 (defmethod path ((release project-release))
   (make-pathname :name (format NIL "~a-~a" (name release) (version release))

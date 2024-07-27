@@ -9,7 +9,7 @@
    (connection :accessor connection)))
 
 (defmethod initialize-instance :after ((*storage* sqlite) &key (if-does-not-exist :create))
-  (let ((file (uiop:native-namestring (file *storage*))))
+  (let ((file (pathname-utils:native-namestring (file *storage*))))
     (unless (probe-file file)
       (ecase if-does-not-exist
         (:error (error "Sqlite database file~%  ~a~%does not exist." file))

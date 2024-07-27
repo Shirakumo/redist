@@ -31,7 +31,7 @@
 (defgeneric store (storage object slot))
 
 (defmethod open-storage ((file string) type)
-  (open-storage (uiop:parse-native-namestring file) type))
+  (open-storage (pathname-utils:parse-native-namestring file) type))
 
 (defmethod open-storage ((pathname pathname) (type (eql T)))
   (open-storage pathname (intern (string-upcase (pathname-type pathname)) "KEYWORD")))
