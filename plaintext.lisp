@@ -1,23 +1,26 @@
 (in-package #:org.shirakumo.redist)
 
-(defmethod open-storage ((file pathname) (type (eql :lisp)))
+(defmethod open-storage ((file pathname) (type (eql :sexp)))
   (make-instance 'plaintext :file file))
 
 (defclass plaintext (storage)
-  ((file :initform (make-pathname :name "distinfo" :type "lisp" :defaults (storage-file)))
-   (dir :accessor dir)
-   (id-counter :initform 0 :accessor id-counter)))
+  ((file :initform (make-pathname :name "distinfo" :type "sexp" :defaults (storage-file)))
+   (dir :initarg :dir :accessor dir)
+   (id-counter :initarg :id-counter :initform 0 :accessor id-counter)))
 
 (defmethod initialize-instance :after ((*storage* plaintext) &key (if-does-not-exist :create))
   (let ((file (file *storage*)))
-    (unless (probe-file file)
-      (ecase if-does-not-exist
-        (:error (error "Storage file~%  ~a~%does not exist." file))
-        (:create (with-open-file (stream file :direction :output)))
-        ((NIL) (return-from initialize-instance NIL))))
-    (load file)
     (unless (slot-boundp *storage* 'dir)
-      (setf (dir *storage*) (merge-pathnames "distinfo/" (make-pathname :name NIL :type NIL :defaults file))))))
+      (setf (dir *storage*) (merge-pathnames "distinfo/" (make-pathname :name NIL :type NIL :defaults file))))
+    (with-open-file (stream file :if-does-not-exist NIL)
+      (if stream
+          (apply #'reinitialize-instance *storage*
+                 (let ((*package* #.*package*))
+                   (read stream)))
+          (ecase if-does-not-exist
+            (:error (error "Distinfo file ~s does not exist!" file))
+            (:create (store *storage* T T))
+            ((NIL)))))))
 
 (defmethod store :after ((*storage* plaintext) (all (eql T)) (all2 (eql T)))
   (with-open-file (stream (file *storage*) :direction :output :if-exists :supersede)
@@ -26,11 +29,9 @@
             (*print-case* :downcase)
             (*print-right-margin* 80)
             (*print-readably* NIL))
-        (format stream "~&;;;;; Distinfo compiled automatically")
-        (terpri stream) (pprint `(in-package #.(package-name *package*)) stream)
-        (terpri stream) (pprint `(setf (id-counter *storage*) ,(id-counter *storage*)) stream)
-        (terpri stream) (pprint `(setf (dir *storage*) ,(dir *storage*)) stream)
-        (terpri stream)))))
+        (format stream "~&(~s ~s~& ~s ~s)~%"
+                :id-counter (id-counter *storage*)
+                :dir (dir *storage*))))))
 
 (defmethod store :before ((*storage* plaintext) (object stored-object) (slot (eql T)))
   (unless (stored-p object)

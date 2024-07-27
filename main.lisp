@@ -119,26 +119,19 @@ DIST_OUTPUT_DIR       The base directory of the compiled
 STORAGE_FILE          The file that contains all dist storage info.
                       If unspecified tries in order:
                       DIST_SOURCE_DIR/../distinfo.db
-                      DIST_SOURCE_DIR/../distinfo.lisp
+                      DIST_SOURCE_DIR/../distinfo.sexp
                       DIST_OUTPUT_DIR/../distinfo.db
-                      DIST_OUTPUT_DIR/../distinfo.lisp
+                      DIST_OUTPUT_DIR/../distinfo.sexp
                       ~~/dist/distinfo.db
-                      ~~/dist/distinfo.lisp
+                      ~~/dist/distinfo.sexp
 
 Database Info:
 
 Redist keeps a database of all the dists, projects, and releases. This
-database can be stored as a plaintext Lisp source file (the
-\"distinfo\" file) or as an Sqlite database. On startup, redist will
-first load the distinfo file if it exists, then load the Sqlite
-database if it exists and Sqlite can be loaded.
-
-After whatever operation the user has selected has successfully
-completed, redist will persist the information to disk again:
-If the Sqlite database is present, it stores to it again. Same for the
-distinfo file if it does exist already. If neither exist, it will save
-to Sqlite if the Sqlite library was successfully loaded, and otherwise
-to the distinfo file.
+database can be stored as plaintext or as an sqlite database. This is
+informed by the STORAGE_FILE. Redist loads this on startup, and will
+persist any changes made during your operations to it again. If no
+database is present, a basic plaintext storage is created for you.
 
 Please see https://shirakumo.org/projects/redist for more information.
 "))
