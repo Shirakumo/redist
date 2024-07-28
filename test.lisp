@@ -1,5 +1,9 @@
 (in-package #:org.shirakumo.redist)
 
+(defvar *default-tester*)
+(defvar *default-checkout-directory* NIL)
+(defvar *default-cache-directory* NIL)
+
 (define-condition test-failure (error)
   ((system :initarg :system :reader system)
    (tester :initarg :tester :reader tester)
@@ -7,7 +11,17 @@
   (:report (lambda (c s) (format s "Failed to test ~a with ~a~@[:~%~%~a~]"
                                  (name (system c)) (tester c) (report c)))))
 
-(defvar *default-tester*)
+(defun checkout-directory (&rest dirs)
+  (apply #'pathname-utils:subdirectory
+         (or *default-checkout-directory*
+             (pathname-utils:subdirectory (storage-file) "checkouts"))
+         dirs))
+
+(defun cache-directory (&rest dirs)
+  (apply #'pathname-utils:subdirectory
+         (or *default-cache-directory*
+             (pathname-utils:subdirectory (storage-file) "asdf-cache"))
+         dirs))
 
 (defclass tester ()
   ())
@@ -27,25 +41,39 @@
     (with-simple-restart (continue "Ignore the failing system.")
       (apply #'test tester system args))))
 
-(defmethod test ((tester tester) (release release) &rest args &key &allow-other-keys)
+(defmethod test ((tester tester) (release release) &rest args &key (checkout-directory (checkout-directory (name (dist release)) (version release)))
+                                                                   (cache-directory (cache-directory (name (dist release)) (version release)))
+                                                                   verbose
+                 &allow-other-keys)
+  (when verbose (verbose "Ensuring checkout in ~a" checkout-directory))
+  (do-list* (project (projects release))
+    (when verbose (verbose "Checking out ~a" (name project)))
+    (checkout project (pathname-utils:subdirectory checkout-directory (name project))))
   (do-list* (project (projects release))
     (with-simple-restart (continue "Ignore the failing project.")
-      (apply #'test tester (find-release (version release) project) args))))
+      (apply #'test tester project :checkout-directory checkout-directory :cache-directory cache-directory args))))
 
-(defmethod test ((tester tester) (dist dist) &rest args &key &allow-other-keys)
+(defmethod test ((tester tester) (dist dist) &rest args &key (checkout-directory (checkout-directory (name dist) "current"))
+                                                             (cache-directory (cache-directory (name dist) "current"))
+                                                             verbose
+                 &allow-other-keys)
+  (when verbose (verbose "Ensuring checkout in ~a" checkout-directory))
   (do-list* (project (projects dist))
-    (when (active-p project)
-      (restart-case (apply #'test tester project args)
-        (deactivate ()
-          :report "Deactivate the project and continue."
-          (setf (active-p project) NIL))
+    (when verbose (verbose "Checking out ~a" (name project)))
+    (checkout project (pathname-utils:subdirectory checkout-directory (name project))))
+  (do-list* (project (projects dist))
+    (unless (disabled-p project)
+      (restart-case (apply #'test tester project :checkout-directory checkout-directory :cache-directory cache-directory args)
+        (disable ()
+          :report "Disable the project and continue."
+          (setf (disabled-p project) T))
         (continue (&optional e)
           :report "Skip the project and continue."
           (declare (ignore e))
           NIL)))))
 
-;; FIXME: how do we check out the specific dist state if the user requests to test a particular project-release or project?
-;;        we won't know how to check out that "universe" since there's no strictly associated dist release
+(defmethod test ((tester tester) (name string) &rest args &key &allow-other-keys)
+  (apply #'test tester (dist name) args))
 
 (defclass program-tester (tester)
   ())
@@ -53,14 +81,16 @@
 (defgeneric program (program-tester))
 (defgeneric load-arguments (program-tester file))
 
-(defun write-test-file (file system &key (source-directory #p "~/dist/sources/") (cache-directory #p "~/dist/asdf-cache/") run-tests verbose)
+(defun write-test-file (file system &key checkout-directory cache-directory run-tests verbose)
   (when verbose
     (verbose "Writing test file for ~a to ~a" (name system) file))
   (with-open-file (stream file :direction :output :if-exists :supersede)
     (with-standard-io-syntax
       (dolist (form `((require :asdf)
-                      (asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration (:tree ,(pathname-utils:native-namestring source-directory))))
-                      (asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(pathname-utils:native-namestring cache-directory) :implementation))))
+                      ,@(when checkout-directory
+                          `((asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration (:tree ,(pathname-utils:native-namestring checkout-directory))))))
+                      ,@(when cache-directory
+                          `((asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(pathname-utils:native-namestring cache-directory) :implementation))))))
                       (asdf:load-system ',(name system))
                       ,@(when run-tests
                           `((setf cl-user::*exit-on-test-failures* T) ; Not standardised.
@@ -68,7 +98,7 @@
         (pprint form stream)
         (terpri stream)))))
 
-(defmethod test ((tester program-tester) (system system) &rest args &key verbose)
+(defmethod test ((tester program-tester) (system system) &rest args &key verbose &allow-other-keys)
   (uiop:with-temporary-file (:pathname file :prefix (type-of tester) :suffix (name system) :type "lisp")
     (apply #'write-test-file file system args)
     (handler-case (test tester file :verbose verbose)
@@ -82,7 +112,7 @@
                                      :output target :error target))
       (error 'test-failure :tester tester :report (get-output-stream-string output)))))
 
-(defclass sbcl (tester)
+(defclass sbcl (program-tester)
   ())
 
 (defmethod program ((sbcl sbcl))
