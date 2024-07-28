@@ -121,13 +121,13 @@
 
 (defun coerce-args (args)
   (loop for arg in args
-        when arg
         append (etypecase arg
+                 (cons (coerce-args arg))
+                 (null ())
                  (pathname (list (pathname-utils:native-namestring arg)))
                  (string (list arg))
                  (number (list (prin1-to-string arg)))
-                 (symbol (list (string arg)))
-                 (list (mapcar #'coerce-args args)))))
+                 (symbol (list (string arg))))))
 
 (defun run (command &rest args)
   (loop (with-simple-restart (retry "Retry running the program")
