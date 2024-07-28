@@ -11,11 +11,11 @@
 (defgeneric update (manager &key))
 (defgeneric clone (manager &key))
 
-(defmethod clone :before ((manager source-manager) &key verbose)
+(defmethod clone :before ((manager source-manager) &key verbose &allow-other-keys)
   (when verbose
     (verbose "Cloning from ~a ~a" (type-of manager) (url manager))))
 
-(defmethod update :before ((manager source-manager) &key verbose version)
+(defmethod update :before ((manager source-manager) &key verbose version &allow-other-keys)
   (when verbose
     (if version
         (verbose "Checking out to ~a" version)
@@ -46,34 +46,46 @@
 (defclass cvs (source-manager)
   ())
 
-(defmethod clone ((manager cvs) &key version)
-  (run "cvs" "-d" (url manager) "checkout" "-D" (or version "1 second ago") "."))
+(defmethod clone ((manager cvs) &key version shallow)
+  (declare (ignore shallow))
+  (run "cvs" "-d" (url manager) "checkout"
+       "-D" (or version "1 second ago")
+       "."))
 
 (defmethod update ((manager cvs) &key version)
-  (run "cvs" "-d" (url manager) "update" "-d" "-D" (or version "1 second ago")))
+  (run "cvs" "-d" (url manager) "update"
+       "-d" "-D" (or version "1 second ago")))
 
 (defclass svn (source-manager)
   ())
 
-(defmethod clone ((manager svn) &key version)
-  (run "svn" "checkout" "-r" (or version "HEAD") (url manager) "."))
+(defmethod clone ((manager svn) &key version shallow)
+  (declare (ignore shallow))
+  (run "svn" "checkout"
+       "-r" (or version "HEAD")
+       (url manager)
+       "."))
 
 (defmethod update ((manager svn) &key version)
-  (run "svn" "update" "-r" (or version "HEAD") "."))
+  (run "svn" "update"
+       "-r" (or version "HEAD")
+       "."))
 
 (defmethod version ((manager svn))
-  (run-string "svn" "info" "--show-item" "last-changed-revision"))
+  (run-string "svn" "info"
+              "--show-item" "last-changed-revision"))
 
 (defclass darcs (source-manager)
   ())
 
-(defmethod clone ((manager darcs) &key version)
+(defmethod clone ((manager darcs) &key version shallow)
   (let ((name (pathname-utils:directory-name simple-inferiors:*cwd*)))
     (uiop:delete-empty-directory simple-inferiors:*cwd*)
     (simple-inferiors:with-chdir ((pathname-utils:parent simple-inferiors:*cwd*))
-      (if version
-          (run "darcs" "clone" "--tag" version (url manager) name)
-          (run "darcs" "clone" (url manager) name)))))
+      (run "darcs" "clone"
+           (when shallow (list "--lazy"))
+           (when version (list "--tag" version))
+           (url manager) name))))
 
 (defmethod update ((manager darcs) &key version)
   (when version (error "Not supported yet."))
@@ -87,10 +99,11 @@
 (defclass mercurial (source-manager)
   ())
 
-(defmethod clone ((manager mercurial) &key version)
-  (if version
-      (run "hg" "clone" "-r" version (url manager) ".")
-      (run "hg" "clone" (url manager) ".")))
+(defmethod clone ((manager mercurial) &key version shallow)
+  (declare (ignore shallow))
+  (run "hg" "clone"
+       (when version "-r" version)
+       (url manager) "."))
 
 (defmethod update ((manager mercurial) &key version)
   (run "hg" "pull")
@@ -109,10 +122,11 @@
    (list :branch (branch manager)
          :tag (tag manager))))
 
-(defmethod clone ((manager git) &key version)
-  (if (branch manager)
-      (run "git" "clone" "--branch" (branch manager) (url manager) ".")
-      (run "git" "clone" (url manager) "."))
+(defmethod clone ((manager git) &key version shallow)
+  (run "git" "clone"
+       (when (branch manager) (list "--branch" (branch manager)))
+       (when shallow (list "--depth" "1"))
+       (url manager) ".")
   (when (or version (tag manager))
     (update manager :version version)))
 
@@ -166,8 +180,8 @@
 (defclass http (source-manager)
   ())
 
-(defmethod clone ((manager http) &key version)
-  (declare (ignore version))
+(defmethod clone ((manager http) &key version shallow)
+  (declare (ignore version shallow))
   (download-source (url manager)))
 
 (defmethod update ((manager http) &rest args &key &allow-other-keys)
@@ -222,7 +236,8 @@
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (version :initarg :version :initform NIL :accessor version)))
 
-(defmethod clone ((manager dist-source) &key version)
+(defmethod clone ((manager dist-source) &key version shallow)
+  (declare (ignore shallow))
   (let* ((index (fetch (url manager) #'read-dist-index))
          (versions (gethash "available-versions-url" index)))
     (when (and version versions)
