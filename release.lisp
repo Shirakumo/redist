@@ -88,6 +88,10 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
 (defmethod version< ((a release) (b release))
   (version< (version a) (version b)))
 
+(defmethod checkout ((release release) path &rest args &key &allow-other-keys)
+  (loop for project in (projects release)
+        do (apply #'checkout (pathname-utils:subdirectory path (name project)) path args)))
+
 (defclass project-release (stored-object)
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (version :initarg :version :initform (arg! :version) :accessor version)
@@ -199,6 +203,9 @@ Systems:~12t~a~%"
               syscalls winhttp package-locks sbcl-single-float-tran)
         :test #'string-equal))
 
+(defmethod checkout ((release project-release) path &rest args)
+  (apply #'checkout (project release) path :version (version release) args))
+
 (defclass system (stored-object)
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (name :initarg :name :initform (arg! :name) :accessor name)
@@ -211,7 +218,7 @@ Systems:~12t~a~%"
   (setf (name system) (string-downcase (name system)))
   (multiple-value-bind (absolute-p path) (pathname-utils:absolute-p (file system))
     (unless absolute-p
-      (setf (file system) (merge-pathnames path (source-directory (project (project system))))))))
+      (setf (file system) (merge-pathnames path (source-directory (project system)))))))
 
 (defmethod (setf dependencies) :around ((dependencies cons) (system system))
   (call-next-method (delete-duplicates (sort (remove-if #'implementation-specific-dependency-p dependencies) #'string<) :test #'string=) system))

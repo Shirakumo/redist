@@ -111,6 +111,10 @@ Versions:~12t~a~%"
 (defmethod list-versions ((dist dist))
   (mapcar #'version (releases dist)))
 
+(defmethod checkout ((dist dist) path &rest args &key &allow-other-keys)
+  (loop for project in (projects dist)
+        do (apply #'checkout project (pathname-utils:subdirectory path (name project)) args)))
+
 (defmacro define-dist (name projects &body body)
   (form-fiddle:with-body-options (releases initargs) body
     (let ((type (getf initargs :type 'timestamp-versioned-dist)))
