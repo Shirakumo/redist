@@ -11,6 +11,13 @@
 (defgeneric update (manager &key))
 (defgeneric clone (manager &key))
 
+(defmethod checkout ((manager source-manager) target &rest args &key version &allow-other-keys)
+  (simple-inferiors:with-chdir (target)
+    (cond ((filesystem-utils:empty-directory-p target)
+           (apply #'clone manager :shallow T :version version args))
+          ((or (null version) (string/= version (version manager)))
+           (apply #'update manager :version version args)))))
+
 (defmethod clone :before ((manager source-manager) &key verbose &allow-other-keys)
   (when verbose
     (verbose "Cloning from ~a ~a" (type-of manager) (url manager))))
@@ -121,6 +128,11 @@
   (prune-plist
    (list :branch (branch manager)
          :tag (tag manager))))
+
+(defmethod checkout ((manager git) target &rest args &key &allow-other-keys)
+  ;; Stub out the URL for our local copy for faster checkout
+  (let ((other (make-instance 'git :url simple-inferiors:*cwd*)))
+    (apply #'call-next-method other target args)))
 
 (defmethod clone ((manager git) &key version shallow (tag (tag manager)))
   (run "git" "clone"
