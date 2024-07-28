@@ -122,13 +122,19 @@
    (list :branch (branch manager)
          :tag (tag manager))))
 
-(defmethod clone ((manager git) &key version shallow)
+(defmethod clone ((manager git) &key version shallow (tag (tag manager)))
   (run "git" "clone"
        (when (branch manager) (list "--branch" (branch manager)))
        (when shallow (list "--depth" "1"))
        (url manager) ".")
-  (when (or version (tag manager))
+  (when (or (and tag (string/= tag (git-current-tag)))
+            (and version (string/= version (version manager))))
+    (when shallow
+      (run "git" "fetch" "--unshallow"))
     (update manager :version version)))
+
+(defun git-current-tag ()
+  (ignore-errors (run-string "git" "describe" "--exact-match" "--tags")))
 
 (defmethod update ((manager git) &key version)
   (cond (version
