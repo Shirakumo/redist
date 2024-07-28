@@ -36,7 +36,7 @@
   ((name :initarg :name :initform (arg! :name) :accessor name)
    (source-directory :accessor source-directory)
    (sources :accessor sources)
-   (disabled-p :initarg :disabled-p :accessor disabled-p)
+   (disabled-p :initarg :disabled-p :initform NIL :accessor disabled-p)
    (excluded-systems :initarg :excluded-systems :accessor excluded-systems)
    (excluded-paths :initarg :excluded-paths :accessor excluded-paths)
    (releases :accessor releases)
@@ -45,7 +45,8 @@
 (defmethod shared-initialize :after ((project project) slots &key (releases NIL releases-p) (sources NIL sources-p) source-directory (verbose T))
   (when source-directory
     (setf (source-directory project) (uiop:truenamize (absolutize source-directory (default-source-directory)))))
-  (when (and (not (slot-boundp project 'source-directory)) (stored-p project))
+  (when (and (not (slot-boundp project 'source-directory))
+             (not (stored-p project)))
     (setf (source-directory project) (pathname-utils:subdirectory (default-source-directory) (name project))))
   (when releases-p
     (setf (releases project) releases))

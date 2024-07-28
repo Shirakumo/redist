@@ -88,7 +88,9 @@
     (with-standard-io-syntax
       (dolist (form `((require :asdf)
                       ,@(when checkout-directory
-                          `((asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration (:tree ,(pathname-utils:native-namestring checkout-directory))))))
+                          `((asdf:initialize-source-registry '(:source-registry :ignore-inherited-configuration
+                                                               ,@(loop for dir in (enlist checkout-directory)
+                                                                       collect `(:tree ,(pathname-utils:native-namestring dir)))))))
                       ,@(when cache-directory
                           `((asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(pathname-utils:native-namestring cache-directory) :implementation))))))
                       (asdf:load-system ',(name system))
