@@ -17,7 +17,7 @@
                 thereis (loop for type in (list-storage-file-types)
                               thereis (probe-file (make-pathname :name "distinfo" :type type :defaults dir))))
           (loop for dir in dirs
-                thereis dir)))))
+                thereis (when dir (make-pathname :name "distinfo" :type (first (list-storage-file-types)) :defaults dir)))))))
 
 (defclass storage ()
   ((file :initarg :file :initform (arg! :file) :accessor file)))
@@ -75,12 +75,12 @@
 
 (defmethod retrieve ((storage (eql T)) object slot)
   (unless *storage*
-    (setf *storage* (try-open-storage)))
+    (setf *storage* (or (try-open-storage) (make-instance 'plaintext))))
   (retrieve *storage* object slot))
 
 (defmethod store ((storage (eql T)) object slot)
   (unless *storage*
-    (setf *storage* (try-open-storage)))
+    (setf *storage* (or (try-open-storage) (make-instance 'plaintext))))
   (store *storage* object slot))
 
 (defmethod store :before ((storage storage) (object stored-object) slot)
