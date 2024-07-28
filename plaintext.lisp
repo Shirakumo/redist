@@ -44,8 +44,17 @@
                   :directory (list :relative (string-downcase type)))
    (dir *storage*)))
 
+(defun plaintext-type (object)
+  (etypecase object
+    (dist 'dist)
+    (project 'project)
+    (release 'release)
+    (project-release 'project-release)
+    (system 'system)
+    (stored-object (type-of object))))
+
 (defun store-plaintext (object &rest fields)
-  (let ((file (plaintext-file (type-of object) (id object))))
+  (let ((file (plaintext-file (plaintext-type object) (id object))))
     (ensure-directories-exist file)
     (with-open-file (stream file :direction :output :if-exists :supersede)
       (with-standard-io-syntax
@@ -59,7 +68,7 @@
           (format stream ")~%"))))))
 
 (defun store-slot (object slot value)
-  (let ((file (plaintext-file (type-of object) (id object) slot)))
+  (let ((file (plaintext-file (plaintext-type object) (id object) slot)))
     (ensure-directories-exist file)
     (with-open-file (stream file :direction :output :if-exists :supersede)
       (with-standard-io-syntax
@@ -70,21 +79,25 @@
           (format stream "~&~s~%" value))))))
 
 (defun read-plaintext (file)
-  (with-open-file (stream file :direction :input)
-    (let ((*package* #.*package*))
-      (read stream))))
+  (with-open-file (stream file :direction :input :if-does-not-exist NIL)
+    (when stream
+      (let ((*package* #.*package*))
+        (read stream)))))
 
 (defun retrieve-plaintext (object &optional slot)
-  (read-plaintext (plaintext-file (type-of object) (id object) slot)))
+  (read-plaintext (plaintext-file (plaintext-type object) (id object) slot)))
 
 (defun retrieve-listed (object slot type existing)
   (loop for id in (retrieve-plaintext object slot)
         collect (apply #'ensure-instance (find id existing :key #'id) type
                        (read-plaintext (plaintext-file type id)))))
 
-(defmethod retrieve ((*storage* plaintext) (object dist) (name string))
-  (let ((id (pathname-name (truename (plaintext-file 'dist name)))))
-    (ensure-instance (gethash name *dists*) 'dist :id id :name name)))
+(defmethod retrieve ((*storage* plaintext) (object (eql 'dist)) (name string))
+  (let ((file (plaintext-file 'dist name)))
+    (when (probe-file file)
+      (let* ((args (read-plaintext file))
+             (name (getf args :name)))
+        (setf (dist name) (apply #'ensure-instance (gethash name *dists*) 'dist args))))))
 
 (defmethod retrieve ((*storage* plaintext) (object (eql 'dist)) (all (eql T)))
   (dolist (file (directory (plaintext-file 'dist "*")))
@@ -100,20 +113,26 @@
   (setf (excluded-paths object) (retrieve-plaintext object slot)))
 
 (defmethod retrieve ((*storage* plaintext) (object dist) (slot (eql 'projects)))
-  (setf (projects object) (retrieve-listed object slot 'project (projects object))))
+  (setf (projects object) (retrieve-listed object slot 'project
+                                           (if (slot-boundp object 'projects) (projects object) ()))))
 
 (defmethod retrieve ((*storage* plaintext) (object dist) (slot (eql 'releases)))
-  (setf (releases object) (retrieve-listed object slot 'release (releases object))))
+  (setf (releases object) (retrieve-listed object slot 'release
+                                           (if (slot-boundp object 'releases) (releases object) ()))))
 
 (defmethod retrieve ((*storage* plaintext) (object release) (slot (eql T)))
   (apply #'reinitialize-instance object (retrieve-plaintext object)))
 
 (defmethod retrieve ((*storage* plaintext) (object release) (slot (eql 'projects)))
-  (setf (projects object) (retrieve-listed object slot 'project (projects object))))
+  (setf (projects object) (retrieve-listed object slot 'project
+                                           (if (slot-boundp object 'projects) (projects object) ()))))
 
-(defmethod retrieve ((*storage* plaintext) (object project) (name string))
-  (let ((id (pathname-name (truename (plaintext-file 'project name)))))
-    (ensure-instance (gethash name *projects*) 'project :id id :name name)))
+(defmethod retrieve ((*storage* plaintext) (object (eql 'project)) (name string))
+  (let ((file (plaintext-file 'project name)))
+    (when (probe-file file)
+      (let* ((args (read-plaintext file))
+             (name (getf args :name)))
+        (setf (project name) (apply #'ensure-instance (gethash name *projects*) 'project args))))))
 
 (defmethod retrieve ((*storage* plaintext) (object (eql 'project)) (all (eql T)))
   (dolist (file (directory (plaintext-file 'project "*")))
@@ -132,7 +151,8 @@
   (setf (excluded-paths object) (retrieve-plaintext object slot)))
 
 (defmethod retrieve ((*storage* plaintext) (object project) (slot (eql 'releases)))
-  (setf (releases object) (retrieve-listed object slot 'project-release (releases object))))
+  (setf (releases object) (retrieve-listed object slot 'project-release
+                                           (if (slot-boundp object 'releases) (releases object) ()))))
 
 (defmethod retrieve ((*storage* plaintext) (object project-release) (slot (eql T)))
   (apply #'reinitialize-instance object (retrieve-plaintext object)))
@@ -203,7 +223,7 @@
                    :archive-md5 (archive-md5 object)
                    :source-sha1 (source-sha1 object)
                    :systems (loop for system in (systems object)
-                                  collect (list :name (name system)
+                                  collect (list (name system)
                                                 :file (file system)
                                                 :dependencies (dependencies system))))
   (store *storage* object 'source-files))

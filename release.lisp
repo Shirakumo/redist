@@ -160,7 +160,7 @@ Systems:~12t~a~%"
                            collect (make-instance 'system :project release :name name :file asd :dependencies deps)))))
 
 (defmethod ensure-system ((spec cons) (release project-release))
-  (destructuring-bind (name . initargs) spec
+  (destructuring-bind (name . initargs) (enlist spec)
     (apply #'make-instance 'system :project release :name name initargs)))
 
 (defmethod ensure-project-release ((project project-release) (release release))
