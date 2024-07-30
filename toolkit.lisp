@@ -36,9 +36,9 @@
 
 (defun tgz (files output &rest tar-args &key (if-exists :error) &allow-other-keys)
   (let ((tar (make-pathname :type "tar" :defaults output)))
-    (apply #'tar files tar :if-exists :error tar-args)
     (unwind-protect
-         (gz tar output :if-exists if-exists)
+         (progn (apply #'tar files tar :if-exists :supersede tar-args)
+                (gz tar output :if-exists if-exists))
       (delete-file tar))))
 
 (defun enlist (list &rest els)
