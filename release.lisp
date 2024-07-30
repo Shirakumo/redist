@@ -119,11 +119,15 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
   (when systems-p
     (setf (systems release) systems))
   (unless (stored-p release)
+    (if (slot-boundp release 'source-files)
+        (loop for cons on (source-files release)
+              do (setf (car cons) (absolutize (car cons) (source-directory (project release)))))
+        (setf (source-files release)
+              (gather-sources (source-directory (project release))
+                              (append (excluded-paths (project release))
+                                      *excluded-paths*))))
     (unless (slot-boundp release 'systems)
-      (setf (systems release) T))
-    (when (slot-boundp release 'source-files)
-      (loop for cons on (source-files release)
-            do (setf (car cons) (absolutize (car cons) (source-directory (project release))))))))
+      (setf (systems release) T))))
 
 (defmethod (setf source-files) ((all (eql T)) (release project-release))
   (setf (source-files release) (gather-sources (source-directory (project release))
@@ -147,14 +151,6 @@ Systems:~12t~a~%"
           (archive-md5 release)
           (source-sha1 release)
           (mapcar #'name (systems release))))
-
-(defmethod source-files ((release project-release))
-  (let ((value (slot-value release 'source-files)))
-    (or value
-        (setf (source-files release)
-              (gather-sources (source-directory (project release))
-                              (append (excluded-paths (project release))
-                                      *excluded-paths*))))))
 
 (defmethod (setf systems) :around ((systems cons) (release project-release))
   (call-next-method (sort (loop for system in systems collect (ensure-system system release)) #'string< :key #'name) release))
