@@ -166,7 +166,8 @@
                    :url (url object))
   (let ((link (plaintext-file 'dist (name object))))
     (when (probe-file link) (delete-file link))
-    (filesystem-utils:create-symbolic-link link (plaintext-file 'dist (id object))))
+    (filesystem-utils:create-symbolic-link
+     link (pathname-utils:relative-pathname link (plaintext-file 'dist (id object)))))
   (store *storage* object 'excluded-paths)
   (store *storage* object 'projects)
   (store *storage* object 'releases))
@@ -200,7 +201,8 @@
                    :sources (mapcar #'serialize (sources object)))
   (let ((link (plaintext-file 'project (name object))))
     (when (probe-file link) (delete-file link))
-    (filesystem-utils:create-symbolic-link link (plaintext-file 'project (id object))))
+    (filesystem-utils:create-symbolic-link
+     link (pathname-utils:relative-pathname link (plaintext-file 'project (id object)))))
   (store *storage* object 'excluded-systems)
   (store *storage* object 'excluded-paths)
   (store *storage* object 'releases))
