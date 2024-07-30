@@ -241,15 +241,15 @@ Please see https://shirakumo.org/projects/redist for more information.
 Sources:~12t~a
 Output:~12t~a
 Storage:~12t~a
-Dists:~12t~{~a ~a~^~%~12t~}
-Projects:~12t~{~a ~a~^~%~12t~}~%"
+Dists:"
                  (default-source-directory)
                  (default-output-directory)
-                 (storage-file)
-                 (loop for dist in (list-dists)
-                       collect (version dist) collect (name dist))
-                 (loop for project in (list-projects)
-                       collect (version project) collect (name project))))))
+                 (storage-file))
+         (loop for dist in (list-dists)
+               do (format *error-output* "~12t~a ~a~%" (version dist) (name dist)))
+         (format *error-output* "Projects:")
+         (loop for project in (list-projects)
+               do (format *error-output* "~12t~a ~a~%" (version project) (name project))))))
 
 (defun main/add (url &key type name dist)
   (let* ((name (or name (url-extract-name url)))
