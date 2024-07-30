@@ -227,7 +227,7 @@
                    :source-sha1 (source-sha1 object)
                    :systems (loop for system in (systems object)
                                   collect (list (name system)
-                                                :file (relpath (file system) (default-source-directory))
+                                                :file (relpath (file system) (source-directory (project (project system))))
                                                 :dependencies (dependencies system))))
   (store *storage* object 'source-files))
 
