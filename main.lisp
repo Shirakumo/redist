@@ -172,6 +172,8 @@ STORAGE_FILE          The file that contains all dist storage info.
                       DIST_OUTPUT_DIR/../distinfo.sexp
                       ~~/dist/distinfo.db
                       ~~/dist/distinfo.sexp
+                      distinfo.db
+                      distinfo.sexp
 
 Database Info:
 
