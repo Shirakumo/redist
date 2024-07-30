@@ -95,6 +95,9 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
   (loop for project in (projects release)
         do (apply #'checkout (pathname-utils:subdirectory path (name project)) path args)))
 
+(defmethod version-hash ((release release))
+  (hash (sort (copy-seq (projects release)) #'string< :key #'name)))
+
 (defclass project-release (stored-object)
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (version :initarg :version :initform (arg! :version) :accessor version)
@@ -211,6 +214,9 @@ Systems:~12t~a~%"
 (defmethod checkout ((release project-release) path &rest args)
   (apply #'checkout (project release) path :version (version release) args))
 
+(defmethod version-hash ((release project-release))
+  (hash (sort (copy-seq (systems release)) #'string< :key #'name)))
+
 (defclass system (stored-object)
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (name :initarg :name :initform (arg! :name) :accessor name)
@@ -241,3 +247,9 @@ Systems:~12t~a~%"
 
 (defmethod version ((system system))
   (version (project system)))
+
+(defmethod version-hash ((system system))
+  (let ((chain (list (list (name system) (version system)))))
+    (dolist (dependency (dependencies system))
+      (push (list (name dependency) (version dependency)) chain))
+    (hash (sort chain #'string< :key #'car))))

@@ -214,3 +214,15 @@
 
 (defgeneric serialize (thing)
   (:method-combination append :most-specific-last))
+
+(defun hash (obj)
+  (let ((state (ironclad:make-digest :sha256)))
+    (labels ((rec (obj)
+               (etypecase obj
+                 (string (rec (babel:string-to-octets obj)))
+                 (vector (ironclad:update-digest state obj))
+                 (standard-object (rec (version-hash obj)))
+                 (list (mapc #'rec obj)))))
+      (rec obj))
+    (ironclad:byte-array-to-hex-string
+     (ironclad:produce-digest state))))
