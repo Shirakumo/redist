@@ -16,11 +16,13 @@
    (releases :accessor releases)
    (excluded-paths :initarg :excluded-paths :accessor excluded-paths)))
 
-(defmethod shared-initialize :after ((dist dist) slots &key (projects NIL projects-p) (releases NIL releases-p))
+(defmethod shared-initialize :after ((dist dist) slots &key (projects NIL projects-p) (releases NIL releases-p) type)
   (when projects-p
     (setf (projects dist) projects))
   (when releases-p
-    (setf (releases dist) releases)))
+    (setf (releases dist) releases))
+  (when type
+    (change-class dist type)))
 
 (defmethod print-object ((dist dist) stream)
   (print-unreadable-object (dist stream :type T)

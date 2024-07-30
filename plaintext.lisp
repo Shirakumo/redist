@@ -162,6 +162,7 @@
 
 (defmethod store ((*storage* plaintext) (object dist) (slot (eql T)))
   (store-plaintext object
+                   :type (type-of object)
                    :name (name object)
                    :url (url object))
   (let ((link (plaintext-file 'dist (name object))))
