@@ -331,9 +331,11 @@ Dists:"
 
 (defun main (&optional (args (uiop:command-line-arguments)))
   (let ((args (or args '("help"))))
+    #+sbcl (sb-ext:disable-debugger)
     (handler-bind ((error
                      (lambda (e)
                        (cond ((uiop:getenv "REDIST_DEBUG")
+                              #+sbcl (sb-ext:enable-debugger)
                               (invoke-debugger e))
                              (T
                               (format *error-output* "~&ERROR: ~a~%" e)
