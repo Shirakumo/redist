@@ -7,6 +7,9 @@
    (projects :accessor projects)))
 
 (defmethod shared-initialize :after ((release release) slots &key (projects NIL projects-p))
+  (when (stringp (dist release))
+    (setf (dist release) (or (dist (dist release))
+                             (error "No dist named ~s!" (dist release)))))
   (when projects-p (setf (projects release) projects)))
 
 (defmethod initialize-instance :after ((release release) &key dist update verbose (projects NIL projects-p))
@@ -110,6 +113,9 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
       (setf (systems release) T))))
 
 (defmethod shared-initialize :after ((release project-release) slot &key (systems NIL systems-p))
+  (when (stringp (project release))
+    (setf (project release) (or (project (project release))
+                                (error "No project named ~s!" (project release)))))
   (when systems-p
     (setf (systems release) systems))
   (when (and (slot-boundp release 'source-files) (not (stored-p release)))

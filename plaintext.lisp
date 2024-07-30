@@ -185,7 +185,7 @@
 
 (defmethod store ((*storage* plaintext) (object release) (slot (eql T)))
   (store-plaintext object
-                   :dist (id (dist object))
+                   :dist (name (dist object))
                    :version (version object)
                    :timestamp (timestamp object))
   (store *storage* object 'projects))
@@ -220,7 +220,7 @@
 
 (defmethod store ((*storage* plaintext) (object project-release) (all (eql T)))
   (store-plaintext object
-                   :project (id (project object))
+                   :project (name (project object))
                    :version (version object)
                    :archive-md5 (archive-md5 object)
                    :source-sha1 (source-sha1 object)
