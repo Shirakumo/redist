@@ -330,8 +330,9 @@ Dists:"
     (append (nreverse pargs) kargs)))
 
 (defun main (&optional (args (uiop:command-line-arguments)))
+  #+sbcl (sb-ext:disable-debugger)
   (let ((args (or args '("help"))))
-    #+sbcl (sb-ext:disable-debugger)
+    (setf *here* (pathname-utils:to-directory (first (uiop:raw-command-line-arguments))))
     (handler-bind ((error
                      (lambda (e)
                        (cond ((uiop:getenv "REDIST_DEBUG")
