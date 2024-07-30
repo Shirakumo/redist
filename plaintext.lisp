@@ -39,7 +39,7 @@
 
 (defun plaintext-file (type id &optional slot)
   (merge-pathnames
-   (make-pathname :name (princ-to-string id)
+   (make-pathname :name (if (eq id :wild) pathname-utils:*wild-component* (princ-to-string id))
                   :type (when slot (string-downcase slot))
                   :directory (list :relative (string-downcase type)))
    (dir *storage*)))
@@ -100,7 +100,7 @@
         (setf (dist name) (apply #'ensure-instance (gethash name *dists*) 'dist args))))))
 
 (defmethod retrieve ((*storage* plaintext) (object (eql 'dist)) (all (eql T)))
-  (dolist (file (directory (plaintext-file 'dist "*")))
+  (dolist (file (directory (plaintext-file 'dist :wild)))
     (when (every #'digit-char-p (pathname-name file))
       (let* ((args (read-plaintext file))
              (name (getf args :name)))
@@ -135,7 +135,7 @@
         (setf (project name) (apply #'ensure-instance (gethash name *projects*) 'project args))))))
 
 (defmethod retrieve ((*storage* plaintext) (object (eql 'project)) (all (eql T)))
-  (dolist (file (directory (plaintext-file 'project "*")))
+  (dolist (file (directory (plaintext-file 'project :wild)))
     (when (every #'digit-char-p (pathname-name file))
       (let* ((args (read-plaintext file))
              (name (getf args :name)))
