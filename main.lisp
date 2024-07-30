@@ -201,7 +201,8 @@ Please see https://shirakumo.org/projects/redist for more information.
 (defun main/update (&key version project verbose jobs)
   (with-kernel (when jobs (parse-integer jobs))
     (do-list* (project (or (enlist project) (list-projects)))
-      (update project :version version :verbose verbose))))
+      (unless (disabled-p project)
+        (update project :version version :verbose verbose)))))
 
 (defun main/list (&optional (thing "releases") &key project dist)
   (cond ((string-equal thing "projects")
