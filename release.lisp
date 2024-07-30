@@ -118,9 +118,12 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
                                 (error "No project named ~s!" (project release)))))
   (when systems-p
     (setf (systems release) systems))
-  (when (and (slot-boundp release 'source-files) (not (stored-p release)))
-    (loop for cons on (source-files release)
-          do (setf (car cons) (absolutize (car cons) (source-directory (project release)))))))
+  (unless (stored-p release)
+    (unless (slot-boundp release 'systems)
+      (setf (systems release) T))
+    (when (slot-boundp release 'source-files)
+      (loop for cons on (source-files release)
+            do (setf (car cons) (absolutize (car cons) (source-directory (project release))))))))
 
 (defmethod (setf source-files) ((all (eql T)) (release project-release))
   (setf (source-files release) (gather-sources (source-directory (project release))
