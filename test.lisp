@@ -55,8 +55,18 @@
 (defmethod test ((test (eql T)) thing &rest args &key &allow-other-keys)
   (apply #'test (make-instance 'reporting-test) thing args))
 
-(defmethod test :around ((test test) thing &key)
-  (call-next-method)
+(defmethod test :around ((test test) thing &rest args &key on-error &allow-other-keys)
+  (ecase on-error
+    ((:invoke-debugger :abort :continue)
+     (handler-bind ((error (lambda (e)
+                             (ecase on-error
+                               (:invoke-debugger (invoke-debugger e))
+                               (:abort (abort e))
+                               (:continue (continue e))))))
+       (remf args :on-error)
+       (apply #'call-next-method test thing args)))
+    ((NIL)
+     (call-next-method)))
   test)
 
 (defmethod test ((test test) (project project) &rest args &key &allow-other-keys)
@@ -93,18 +103,24 @@
 (defmethod test ((test test) (name symbol) &rest args &key &allow-other-keys)
   (apply #'test test (or (dist name) (error "No such dist ~s" name)) args))
 
-(defmethod test ((test test) (system system) &rest args &key &allow-other-keys)
+(defmethod test ((test test) (system system) &rest args &key verbose &allow-other-keys)
   (tagbody retry
      (restart-case 
          (handler-bind ((test-failure
                           (lambda (e)
                             (setf (slot-value e 'system) system)
                             (setf (slot-value e 'tester) test)
+                            (when verbose
+                              (verbose "~a failed" (name system)))
                             (emit-test-result test system :failed (report e))))
                         (error
                           (lambda (e)
+                            (when verbose
+                              (verbose "~a errored" (name system)))
                             (emit-test-result test system :errored (princ-to-string e)))))
-           (emit-test-result test system :passed (apply #'test (runner test) system args)))
+           (emit-test-result test system :passed (apply #'test (runner test) system args))
+           (when verbose
+             (verbose "~a passed" (name system))))
        (retry ()
          :report "Retry testing the system."
          (go retry))
@@ -158,9 +174,8 @@
 (defgeneric load-arguments (runner file))
 (defgeneric eval-arguments (runner form))
 
-(defun write-test-file (file system &key checkout-directory cache-directory run-tests verbose)
-  (when verbose
-    (verbose "Writing test file for ~a to ~a" (name system) file))
+(defun write-test-file (file system &key arguments checkout-directory cache-directory run-tests verbose)
+  (declare (ignore verbose))
   (with-open-file (stream file :direction :output :if-exists :supersede)
     (with-standard-io-syntax
       (dolist (form `((require :asdf)
@@ -172,18 +187,23 @@
                                                                        collect `(:tree ,(pathname-utils:native-namestring dir)))))))
                       ,@(when cache-directory
                           `((asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(pathname-utils:native-namestring cache-directory) :implementation))))))
+                      (setf *error-output* *standard-output*)
+                      (format T "~&; [REDIST] Running with arguments:~{~%;   ~a~}~%" ',arguments)
+                      (format T "~&~%; [REDIST] Loading system ~a~%~%" ',(name system))
                       (asdf:load-system ',(name system) :force T)
                       ,@(when run-tests
-                          `((setf cl-user::*exit-on-test-failures* T) ; Not standardised.
+                          `((format T "~&~%; [REDIST] Testing system ~a~%~%" ',(name system))
+                            (setf cl-user::*exit-on-test-failures* T) ; Not standardised.
                             (asdf:test-system ',(name system))))
-                      (format T "~&~%~%; Test completed successfully!~%")
+                      (format T "~&~%; [REDIST] Test completed successfully!~%")
                       (uiop:quit 0)))
         (pprint form stream)
         (terpri stream)))))
 
 (defmethod test ((runner runner) (system system) &rest args &key verbose &allow-other-keys)
   (uiop:with-temporary-file (:pathname file :prefix (string (type-of runner)) :suffix (name system) :type "lisp")
-    (apply #'write-test-file file system args)
+    (apply #'write-test-file file system :arguments (load-arguments runner file) args)
+    (when verbose (verbose "Testing ~a with ~a" (name system) (description runner)))
     (test runner file :verbose (eql verbose :full))))
 
 (defmethod test ((runner runner) (file pathname) &key verbose)

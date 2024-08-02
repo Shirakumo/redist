@@ -60,12 +60,14 @@ available-versions-url: ~a"
   node)
 
 (defun generate-html (output output-name template &rest args)
-  (let ((template (make-pathname :name template :type "ctml" :defaults (merge-pathnames "template/" *here*)))
-        (*package* #.*package*))
+  (let* ((template (make-pathname :name template :type "ctml" :defaults (merge-pathnames "template/" *here*)))
+         (*package* #.*package*)
+         (page (apply #'clip:process (plump:parse template) args)))
     (with-open-file (output (make-pathname :name output-name :type "html" :defaults output)
                             :direction :output
                             :if-exists :supersede)
-      (plump:serialize (apply #'clip:process (plump:parse template) args) output))))
+      (handler-bind ((plump-dom:invalid-xml-character #'abort))
+        (plump:serialize page output)))))
 
 (defgeneric compile (thing &key))
 

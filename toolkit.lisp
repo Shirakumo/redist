@@ -154,7 +154,8 @@
         when v collect v))
 
 (defun verbose (format &rest args)
-  (format *error-output* "~&; ~?~%" format args))
+  (let ((str (format NIL "; ~?" format args)))
+    (format *error-output* "~&~a~%" str)))
 
 (defun url-extract-name (url)
   ;; FIXME: this sucks
