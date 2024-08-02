@@ -75,6 +75,9 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
 (defmethod dist-url ((release release))
   (format NIL "~a/~a" (url (dist release)) (namestring (dist-path release))))
 
+(defmethod index-url ((release release))
+  (format NIL "/~a" (pathname-utils:unix-namestring (pathname-utils:to-directory (path release)))))
+
 (defmethod path ((release release))
   (merge-pathnames (make-pathname :directory `(:relative ,(version release)))
                    (path (dist release))))
@@ -189,6 +192,9 @@ Systems:~12t~a~%"
 
 (defmethod name ((release project-release))
   (name (project release)))
+
+(defmethod index-url ((release project-release))
+  (format NIL "/~a" (make-pathname :name (version release) :type "html" :defaults (path release))))
 
 (defmethod url ((release project-release))
   (format NIL "/~a" (pathname-utils:unix-namestring (path release))))

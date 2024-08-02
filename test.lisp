@@ -89,11 +89,16 @@
                  :result result
                  :report report))
 
-(defmethod emit-test-result ((tester reporting-tester) (dist dist) result report)
-  ())
-
 (defmethod emit-test-result ((tester reporting-tester) (release release) result report)
-  ())
+  (let ((reports (sort (loop for system being the hash-keys of (results tester) using (hash-value result)
+                             collect (list :system system
+                                           :url (format NIL "~a.html" (name system))
+                                           :result result))
+                       #'string< :key (lambda (e) (name (getf e :system))))))
+    (generate-html (dir tester) "index.html" "release-report"
+                   :runner (runner tester)
+                   :release release
+                   :reports reports)))
 
 (defmethod test :after ((tester tester) (dist dist) &key)
   (emit-test-result tester dist T T))

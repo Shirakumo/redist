@@ -18,8 +18,8 @@
         </p>
         <ul iterate='(projects release)'>
           <li class='project'>
-            <a lquery='(attr :href (format NIL "../../archives/~a/" (name (project *)))) (text (name (project *)))'>PROJECT</a>
-            <a class='version note' lquery='(attr :href (format NIL "../../archives/~a/~a.html" (name (project *)) (version (project *)))) (text (version *))'></a>
+            <a lquery='(attr :href (index-url (project *))) (text (name (project *)))'>PROJECT</a>
+            <a class='version note' lquery='(attr :href (index-url *)) (text (version *))'></a>
           </li>
         </ul>
       </section>

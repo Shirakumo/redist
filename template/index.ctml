@@ -17,7 +17,7 @@
         </p>
         <ul iterate='dists'>
           <li class='dist'>
-            <a lquery='(attr :href (format NIL "~(~a/~)" (name *))) (text (name *))'>DIST</a>
+            <a lquery='(attr :href (index-url *)) (text (name *))'>DIST</a>
             <time lquery="(time (timestamp (first (releases *))))">2022-01-01 10:10:10</time>
           </li>
         </ul>
@@ -28,7 +28,7 @@
         </p>
         <ul iterate='projects'>
           <li class='project'>
-            <a lquery='(attr :href (format NIL "archives/~a/" (name *))) (text (name *))'>DIST</a>
+            <a lquery='(attr :href (index-url *)) (text (name *))'>DIST</a>
           </li>
         </ul>
       </section>

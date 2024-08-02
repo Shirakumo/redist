@@ -26,7 +26,7 @@
         </p>
         <ul iterate='(releases dist)'>
           <li class='release'>
-            <a class="version" lquery='(attr :href (format NIL "~a/" (version *))) (text (version *))'>RELEASE</a>
+            <a class="version" lquery='(attr :href (index-url *)) (text (version *))'>RELEASE</a>
             <time lquery='(time (timestamp *))'>2022-01-01 10:10:10</time>
           </li>
         </ul>
@@ -37,9 +37,9 @@
         </p>
         <ul iterate='(projects dist)'>
           <li class='project'>
-            <a lquery='(attr :href (format NIL "../archives/~a/" (name *))) (text (name *))'>PROJECT</a>
+            <a lquery='(attr :href (index-url *)) (text (name *))'>PROJECT</a>
             <c:when test="(releases *)">
-              <a class='version note' lquery='(text (version *)) (attr :href (format NIL "../archives/~a/~a.html" (name *) (version *)))'></a>
+              <a class='version note' lquery='(text (version *)) (attr :href (index-url *))'></a>
             </c:when>
           </li>
         </ul>

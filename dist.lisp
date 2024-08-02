@@ -97,6 +97,9 @@ Versions:~12t~a~%"
 (defmethod dist-url ((dist dist))
   (format NIL "~a/~a" (url dist) (namestring (dist-path dist))))
 
+(defmethod index-url ((dist dist))
+  (format NIL "/~a" (pathname-utils:unix-namestring (path dist))))
+
 (defmethod path ((dist dist))
   (make-pathname :directory `(:relative ,(string-downcase (name dist)))))
 

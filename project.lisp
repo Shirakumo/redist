@@ -208,6 +208,9 @@ Versions:~12t~a~%"
 (defmethod url ((project project))
   (format NIL "/~a" (pathname-utils:unix-namestring (path project))))
 
+(defmethod index-url ((project project))
+  (format NIL "/~a" (pathname-utils:unix-namestring (path project))))
+
 (defmethod path ((project project))
   (make-pathname :directory `(:relative "archives" ,(name project))))
 

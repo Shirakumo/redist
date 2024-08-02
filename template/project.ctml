@@ -31,8 +31,8 @@
           </p>
           <ul iterate='(dists project)'>
             <li class='dist'>
-              <a lquery='(attr :href (format NIL "../../~(~a/~)" (name *))) (text (name *))'>DIST</a>
-              <a class="version note" lquery='(text (version *)) (attr :href (format NIL "../../~(~a/~)~a/" (name *) (version *)))'>2022-01-01 10:10:10</a>
+              <a lquery='(attr :href (index-url *)) (text (name *))'>DIST</a>
+              <a class="version note" lquery='(text (version *)) (attr :href (index-url (first (releases *))))'>2022-01-01 10:10:10</a>
             </li>
           </ul>
         </section>
@@ -55,7 +55,7 @@
           </p>
           <ul iterate='(releases project)'>
             <li class='release'>
-              <a class="version" lquery='(attr :href (format NIL "~a.html" (version project))) (text (version *))'>RELEASE</a>
+              <a class="version" lquery='(attr :href (index-url *)) (text (version *))'>RELEASE</a>
             </li>
           </ul>
         </section>

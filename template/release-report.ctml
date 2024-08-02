@@ -3,27 +3,27 @@
   <head>
     <meta charset='utf-8'>
     <meta name="viewport" content="width=device-width">
-    <title>Test report for <c:s>(name system)</c:s> <c:s>(version system)</c:s></title>
+    <title>Test report for <c:s>(version release)</c:s> of <c:s>(name (dist release))</c:s></title>
     <link rel='stylesheet' href='../../redist.css'>
   </head>
   <body>
     <article class="report">
       <header>
-        <a href="./" class="button back">Back</a>
-        <h1>Test report for <c:s>(name system)</c:s> <c:s>(version system)</c:s></h1>
+        <a href="../../" class="button back">Back</a>
+        <h1>Test report for <c:s>(version release)</c:s> of <c:s>(name (dist release))</c:s></h1>
       </header>
       <section class="info" id="info">
         <div class="row">
-          <label>Project:</label>
-          <a lquery="(attr :href (index-url (project system))) (text (name (project system)))">PROJECT</a>
+          <label>Dist:</label>
+          <a lquery="(attr :href (index-url (dist release))) (text (name (dist release)))">DIST</a>
         </div>
         <div class="row">
           <label>Version:</label>
-          <span lquery="(text (version system))">VERSION</span>
+          <span lquery="(text (version release))">VERSION</span>
         </div>
         <div class="row">
           <label>Version Hash:</label>
-          <span lquery="(text (version-hash system))">VERSION</span>
+          <span lquery="(text (version-hash release))">VERSION</span>
         </div>
         <div class="row">
           <label>Date:</label>
@@ -33,13 +33,14 @@
           <label>Runner:</label>
           <span lquery="(text runner)">RUNNER</span>
         </div>
-        <div class="row">
-          <label>Test Result:</label>
-          <span lquery="(text result)">RESULT</span>
-        </div>
       </section>
-      <section class="output" id="output">
-        <pre><code lquery="(text report)"></code></pre>
+      <section class="reports" id="reports">
+        <ul iterate='reports'>
+          <li>
+            <a lquery='(attr :href url) (text (name system))'>SYSTEM</a>
+            <span class="result" lquery='(text result)'>RESULT</span>
+          </li>
+        </ul>
       </section>
     </article>
     <footer>

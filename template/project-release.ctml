@@ -15,7 +15,7 @@
       <section class="info" id="info">
         <div class="row">
           <label>Project:</label>
-          <a href="index.html" lquery="(text (name (project release)))">PROJECT</a>
+          <a lquery="(attr :href (index-url *)) (text (name (project release)))">PROJECT</a>
         </div>
         <div class="row">
           <label>Version:</label>
@@ -42,7 +42,7 @@
           <li class='system'>
             <span class="name" lquery='(text (name *))'>SYSTEM</span>
             <span class="dependencies" iterate="(dependencies *)">
-              <a lquery='(text *) (attr :href (when (find-system * T) (url (project (project (find-system * T))))))'></a>
+              <a lquery='(text *) (attr :href (when (find-system * T) (index-url (project (project (find-system * T))))))'></a>
             </span>
           </li>
         </ul>
