@@ -2,7 +2,6 @@
 
 (defvar *default-runner*)
 (defvar *default-checkout-directory* NIL)
-(defvar *default-report-directory* NIL)
 (defvar *default-cache-directory* NIL)
 (defvar *additional-source-directories* '(#p"~/common-lisp/"))
 
@@ -17,12 +16,6 @@
   (apply #'pathname-utils:subdirectory
          (or *default-checkout-directory*
              (pathname-utils:subdirectory (storage-file) "checkouts"))
-         (mapcar #'string dirs)))
-
-(defun report-directory (&rest dirs)
-  (apply #'pathname-utils:subdirectory
-         (or *default-report-directory*
-             (pathname-utils:subdirectory (default-output-directory) "reports"))
          (mapcar #'string dirs)))
 
 (defun cache-directory (&rest dirs)
@@ -133,11 +126,11 @@
 
 (defmethod test :before ((test reporting-test) (release release) &key)
   (unless (dir test)
-    (setf (dir test) (pathname-utils:subdirectory (report-directory) (version release))))
-  (ensure-directories-exist (dir test)))
+    (setf (dir test) (merge-pathnames (path release) (default-output-directory))))
+  (ensure-directories-exist (pathname-utils:subdirectory (dir test) "test")))
 
 (defmethod emit-test-result :after ((test reporting-test) (system system) result report)
-  (generate-html (dir test) (name system) "report"
+  (generate-html (pathname-utils:subdirectory (dir test) "test") (name system) "report"
                  :test test
                  :system system
                  :result result
@@ -145,17 +138,16 @@
 
 (defmethod emit-test-result ((test reporting-test) (release release) result report)
   (let ((reports (sort (loop for system being the hash-keys of (results test) using (hash-value result)
-                             collect (list :system system
-                                           :url (format NIL "~a.html" (name system))
-                                           :result result))
+                             collect (list :system system :result result))
                        #'string< :key (lambda (e) (name (getf e :system))))))
-    (generate-html (dir test) "index" "release-report"
+    (generate-html (dir test) "report" "release-report"
                    :test test
                    :release release
                    :reports reports)))
 
-(defmethod test :after ((test test) (release release) &key)
-  (emit-test-result test release T T))
+(defmethod test :after ((test test) (release release) &key (compile T))
+  (emit-test-result test release T T)
+  (when compile (compile release)))
 
 (defmethod index-url ((test test))
   (format NIL "/~a" (relpath (dir test) (default-output-directory))))

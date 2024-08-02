@@ -9,7 +9,7 @@
   <body>
     <article class="report">
       <header>
-        <a href="../../" class="button back">Back</a>
+        <a href="./" class="button back">Back</a>
         <h1>Test report for <c:s>(version release)</c:s> of <c:s>(name (dist release))</c:s></h1>
       </header>
       <section class="info" id="info">
@@ -18,8 +18,8 @@
           <a lquery="(attr :href (index-url (dist release))) (text (name (dist release)))">DIST</a>
         </div>
         <div class="row">
-          <label>Version:</label>
-          <span lquery="(text (version release))">VERSION</span>
+          <label>Release:</label>
+          <a lquery="(attr :href (index-url release)) (text (version release))">VERSION</a>
         </div>
         <div class="row">
           <label>Version Hash:</label>
@@ -33,6 +33,10 @@
           <label>Runner:</label>
           <span lquery="(text (description (runner test)))">RUNNER</span>
         </div>
+        <div class="row">
+          <label>Test Result:</label>
+          <span lquery="(text (result test))">RESULT</span>
+        </div>
       </section>
       <section class="reports" id="reports">
         <p>
@@ -40,7 +44,7 @@
         </p>
         <ul iterate='reports'>
           <li>
-            <a lquery='(attr :href url) (text (name system))'>SYSTEM</a>
+            <a lquery='(attr :href (report-url system)) (text (name system))'>SYSTEM</a>
             <span class="result" lquery='(text result)'>RESULT</span>
           </li>
         </ul>

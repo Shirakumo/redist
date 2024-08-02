@@ -12,6 +12,24 @@
         <a href="../" class="button back">Back</a>
         <h1><c:splice lquery="(text (name (dist release)))" /> Release <c:splice lquery="(text (version release))"/></h1>
       </header>
+      <section class="info" id="info">
+        <div class="row">
+          <label>Dist:</label>
+          <a lquery="(attr :href (index-url (dist release))) (text (name (dist release)))">DIST</a>
+        </div>
+        <div class="row">
+          <label>Version:</label>
+          <span lquery="(text (version release))">VERSION</span>
+        </div>
+        <div class="row">
+          <label>Date:</label>
+          <span lquery="(time (timestamp release))">TIME</span>
+        </div>
+        <div class="row">
+          <label>Test Report:</label>
+          <a lquery="(attr :href (report-url release))">???</a>
+        </div>
+      </section>
       <section class="projects" id="projects">
         <p>
           The release includes the following projects:

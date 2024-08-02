@@ -103,8 +103,8 @@ available-versions-url: ~a"
                                      :if-exists if-exists)
                (write-dist-releases-index dist stream))
              (filesystem-utils:copy-file (merge-pathnames "template/redist.css" *here*) output)
-             (generate-html output "index" "index" :dists (list-dists) :projects (list-projects))
-             (generate-html (f (path dist)) "index" "dist" :dist dist))
+             (generate-html (f (path dist)) "index" "dist" :dist dist)
+             (generate-html output "index" "index" :dists (list-dists) :projects (list-projects)))
            (setf success T))
       ;; We did not return successfully, so remove the release again.
       (when (and (not already-existing) (not success))
@@ -116,11 +116,10 @@ available-versions-url: ~a"
   (when verbose
     (verbose "Compiling release ~a" (version release)))
   (ensure-directories-exist output)
-  ;; Assemble files from new releases
-  (do-list* (project (projects release))
-    (compile project :output output :if-exists if-exists :verbose verbose :force force))
   (flet ((f (path)
            (ensure-directories-exist (merge-pathnames path output))))
+    (do-list* (project (projects release))
+      (compile project :output output :if-exists if-exists :verbose verbose :force force))
     (with-open-file (stream (f (dist-path release))
                             :direction :output
                             :if-exists if-exists)
