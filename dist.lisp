@@ -70,9 +70,17 @@ Versions:~12t~a~%"
   (let ((release (if projects-p
                      (let ((projects (loop for project in projects collect (ensure-project project))))
                        (make-instance 'release :dist dist :version version :update update :verbose verbose :projects projects))
-                     (make-instance 'release :dist dist :version version :update update :verbose verbose))))
-    (push release (releases dist))
-    release))
+                     (make-instance 'release :dist dist :version version :update update :verbose verbose)))
+        (prior (first (releases dist))))
+    (cond ((and prior (loop for project in (projects release)
+                            always (equal (version project)
+                                          (version (find-project (project project) prior)))))
+           (cerror "Re-use the old release" "The last release ~a on ~a has identical project releases."
+                   prior dist)
+           prior)
+          (T
+           (pushnew release (releases dist))
+           release))))
 
 (defmethod find-project ((name symbol) (dist dist))
   (find-project (string name) dist))
