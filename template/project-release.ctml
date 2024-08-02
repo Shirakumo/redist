@@ -29,10 +29,12 @@
           <label>Source SHA1:</label>
           <span lquery="(text (source-sha1 release))">SHA1</span>
         </div>
-        <div class="row">
-          <label>Archive:</label>
-          <a lquery="(attr :href (file-namestring (path release)))">Download</a>
-        </div>
+        <c:when test="(probe-file (merge-pathnames (path release) (default-output-directory)))">
+          <div class="row">
+            <label>Archive:</label>
+            <a lquery="(attr :href (url release))">Download</a>
+          </div>
+        </c:when>
       </section>
       <section class="systems" id="systems">
         <p>

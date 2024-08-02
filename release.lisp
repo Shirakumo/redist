@@ -67,23 +67,26 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
         thereis (find-system name project)))
 
 (defmethod releases-url ((release release))
-  (format NIL "~a/~a" (url (dist release)) (namestring (releases-path release))))
+  (format NIL "~a/~a" (url (dist release)) (pathname-utils:unix-namestring (releases-path release))))
 
 (defmethod systems-url ((release release))
-  (format NIL "~a/~a" (url (dist release)) (namestring (systems-path release))))
+  (format NIL "~a/~a" (url (dist release)) (pathname-utils:unix-namestring (systems-path release))))
 
 (defmethod dist-url ((release release))
-  (format NIL "~a/~a" (url (dist release)) (namestring (dist-path release))))
+  (format NIL "~a/~a" (url (dist release)) (pathname-utils:unix-namestring (dist-path release))))
 
 (defmethod index-url ((release release))
-  (format NIL "/~a" (pathname-utils:unix-namestring (pathname-utils:to-directory (path release)))))
+  (format NIL "/~a" (pathname-utils:unix-namestring (path release))))
 
 (defmethod report-url ((release release))
-  (format NIL "~a/report.html" (index-url release)))
+  (format NIL "/~a" (pathname-utils:unix-namestring (report-path release))))
 
 (defmethod path ((release release))
   (merge-pathnames (make-pathname :directory `(:relative ,(version release)))
                    (path (dist release))))
+
+(defmethod report-path ((release release))
+  (merge-pathnames (make-pathname :name "report" :type "html") (path release)))
 
 (defmethod releases-path ((release release))
   (merge-pathnames (make-pathname :name "releases" :type "txt") (path release)))
