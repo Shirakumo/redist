@@ -130,7 +130,7 @@
   (ensure-directories-exist (pathname-utils:subdirectory (dir test) "test")))
 
 (defmethod emit-test-result :after ((test reporting-test) (system system) result report)
-  (generate-html (pathname-utils:subdirectory (dir test) "test") (name system) "report"
+  (generate-html (pathname-utils:subdirectory (dir test) "test") (safe-name system) "report"
                  :test test
                  :system system
                  :result result

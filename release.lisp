@@ -260,6 +260,9 @@ Systems:~12t~a~%"
 (defmethod version ((system system))
   (version (project system)))
 
+(defmethod safe-name ((system system))
+  (map 'string (lambda (c) (if (find c "/\\|*\":;?<>") #\- c)) (name system)))
+
 (defmethod version-hash ((system system))
   (let ((chain (list (list (name system) (version system)))))
     ;; FIXME: we need to hash within the environment the system is in...
@@ -272,4 +275,4 @@ Systems:~12t~a~%"
     (hash (sort chain #'string< :key #'car))))
 
 (defmethod report-url ((system system))
-  (format NIL "/~a/test/~a.html" (url (project system)) (name system)))
+  (format NIL "/~a/test/~a.html" (url (project system)) (safe-name system)))
