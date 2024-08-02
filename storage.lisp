@@ -114,7 +114,7 @@
 
 (defmethod dist ((name string))
   (or (gethash name *dists*)
-      (retrieve *storage* 'dist name)))
+      (when *storage* (retrieve *storage* 'dist name))))
 
 (defmethod (setf dist) (dist (name symbol))
   (setf (dist (string name)) dist))
@@ -129,7 +129,7 @@
 
 (defmethod project ((name string))
   (or (gethash name *projects*)
-      (retrieve *storage* 'project name)))
+      (when *storage* (retrieve *storage* 'project name))))
 
 (defmethod (setf project) (project (name string))
   (setf (gethash name *projects*) project))
