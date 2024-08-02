@@ -256,6 +256,11 @@ Systems:~12t~a~%"
 
 (defmethod version-hash ((system system))
   (let ((chain (list (list (name system) (version system)))))
+    ;; FIXME: we need to hash within the environment the system is in...
     (dolist (dependency (dependencies system))
-      (push (list (name dependency) (version dependency)) chain))
+      (let ((proj (or (find-system dependency system)
+                      (find-system dependency (project system))
+                      (find-system dependency T))))
+        (when proj
+          (push (list dependency (version proj)) chain))))
     (hash (sort chain #'string< :key #'car))))

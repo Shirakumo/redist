@@ -1,60 +1,60 @@
 (in-package #:org.shirakumo.redist)
 
-(defvar *default-tester*)
+(defvar *default-runner*)
 (defvar *default-checkout-directory* NIL)
 (defvar *default-report-directory* NIL)
 (defvar *default-cache-directory* NIL)
 (defvar *additional-source-directories* '(#p"~/common-lisp/"))
 
 (define-condition test-failure (error)
-  ((system :initarg :system :reader system)
-   (tester :initarg :tester :reader tester)
+  ((system :initarg :system :initform NIL :reader system)
+   (tester :initarg :tester :initform NIL :reader tester)
    (report :initarg :report :initform NIL :reader report))
-  (:report (lambda (c s) (format s "Failed to test ~a with ~a~@[:~%~%~a~]"
+  (:report (lambda (c s) (format s "Failed to test~@[ ~a~]~@[ with ~a~]~@[:~%~%~a~]"
                                  (name (system c)) (tester c) (report c)))))
 
 (defun checkout-directory (&rest dirs)
   (apply #'pathname-utils:subdirectory
          (or *default-checkout-directory*
              (pathname-utils:subdirectory (storage-file) "checkouts"))
-         dirs))
+         (mapcar #'string dirs)))
 
 (defun report-directory (&rest dirs)
   (apply #'pathname-utils:subdirectory
          (or *default-report-directory*
              (pathname-utils:subdirectory (storage-file) "reports"))
-         dirs))
+         (mapcar #'string dirs)))
 
 (defun cache-directory (&rest dirs)
   (apply #'pathname-utils:subdirectory
          (or *default-cache-directory*
              (pathname-utils:subdirectory (storage-file) "asdf-cache"))
-         dirs))
+         (mapcar #'string dirs)))
 
-(defclass tester ()
-  ((results :initform (make-hash-table :test 'eq) :accessor results)))
+(defclass test ()
+  ((results :initform (make-hash-table :test 'eq) :accessor results)
+   (runner :initform *default-runner* :accessor runner)))
 
-(defgeneric emit-test-result (tester system result report))
-(defgeneric test (tester project &key))
-(defgeneric runner (tester))
+(defgeneric emit-test-result (test system result report))
+(defgeneric test (test project &key))
 
-(defmethod emit-test-result ((tester tester) (system system) result report)
-  (setf (gethash system (results tester)) result))
+(defmethod emit-test-result ((test test) (system system) result report)
+  (setf (gethash system (results test)) result))
 
-(defmethod test ((tester (eql T)) thing &rest args &key &allow-other-keys)
-  (apply #'test *default-tester* thing args))
+(defmethod test ((test (eql T)) thing &rest args &key &allow-other-keys)
+  (apply #'test (make-instance 'reporting-test) thing args))
 
-(defmethod test ((tester tester) (project project) &rest args &key &allow-other-keys)
+(defmethod test ((test test) (project project) &rest args &key &allow-other-keys)
   (do-list* (system (systems project))
     (with-simple-restart (continue "Ignore the failing system.")
-      (apply #'test tester system args))))
+      (apply #'test test system args))))
 
-(defmethod test ((tester tester) (project project-release) &rest args &key &allow-other-keys)
+(defmethod test ((test test) (project project-release) &rest args &key &allow-other-keys)
   (do-list* (system (systems project))
     (with-simple-restart (continue "Ignore the failing system.")
-      (apply #'test tester system args))))
+      (apply #'test test system args))))
 
-(defmethod test ((tester tester) (release release) &rest args &key (checkout-directory (checkout-directory (name (dist release)) (version release)))
+(defmethod test ((test test) (release release) &rest args &key (checkout-directory (checkout-directory (name (dist release)) (version release)))
                                                                    (cache-directory (cache-directory (name (dist release)) (version release)))
                                                                    verbose
                  &allow-other-keys)
@@ -64,60 +64,80 @@
     (checkout project (pathname-utils:subdirectory checkout-directory (name project))))
   (do-list* (project (projects release))
     (with-simple-restart (continue "Ignore the failing project.")
-      (apply #'test tester project :checkout-directory checkout-directory :cache-directory cache-directory args))))
+      (apply #'test test project :checkout-directory checkout-directory :cache-directory cache-directory args))))
 
-(defmethod test ((tester tester) (dist dist) &rest args &key &allow-other-keys)
-  (apply #'test tester (make-instance 'release :dist dist :version (next-version dist)) args))
+(defmethod test ((test test) (dist dist) &rest args &key &allow-other-keys)
+  (apply #'test test (make-instance 'release :dist dist :version (next-version dist)) args))
 
-(defmethod test ((tester tester) (name string) &rest args &key &allow-other-keys)
-  (apply #'test tester (dist name) args))
+(defmethod test ((test test) (name string) &rest args &key &allow-other-keys)
+  (apply #'test test (dist name) args))
 
-(defmethod test :around ((tester tester) (system system) &key)
+(defmethod test ((test test) (name symbol) &rest args &key &allow-other-keys)
+  (apply #'test test (dist name) args))
+
+(defmethod test ((test test) (system system) &rest args &key &allow-other-keys)
   (tagbody retry
-     (restart-case (return-from test (call-next-method))
+     (restart-case 
+         (handler-bind ((test-failure
+                          (lambda (e)
+                            (setf (slot-value e 'system) system)
+                            (setf (slot-value e 'tester) test)
+                            (emit-test-result test system :failed (report e))))
+                        (error
+                          (lambda (e)
+                            (emit-test-result test system :errored (princ-to-string e)))))
+           (let ((report (apply #'test (runner test) system args)))
+             (emit-test-result test system :passed report)
+             report))
        (retry ()
          :report "Retry testing the system."
-         (go retry)))))
+         (go retry))
+       (continue ()
+         :report "Ignore the failing system."
+         NIL))))
 
-(defclass reporting-tester (tester)
-  ((dir :initarg :dir :initform (report-directory) :accessor dir)))
+(defclass reporting-test (test)
+  ((dir :initarg :dir :initform NIL :accessor dir)))
 
-(defmethod emit-test-result :after ((tester reporting-tester) (system system) result report)
-  (generate-html (dir tester) (name system) "report"
-                 :runner (runner tester)
+(defmethod test :before ((test reporting-test) (release release) &key)
+  (unless (dir test)
+    (setf (dir test) (pathname-utils:subdirectory (report-directory) (version release))))
+  (ensure-directories-exist (dir test)))
+
+(defmethod emit-test-result :after ((test reporting-test) (system system) result report)
+  (generate-html (dir test) (name system) "report"
+                 :runner (runner test)
                  :system system
                  :result result
                  :report report))
 
-(defmethod emit-test-result ((tester reporting-tester) (release release) result report)
-  (let ((reports (sort (loop for system being the hash-keys of (results tester) using (hash-value result)
+(defmethod emit-test-result ((test reporting-test) (release release) result report)
+  (let ((reports (sort (loop for system being the hash-keys of (results test) using (hash-value result)
                              collect (list :system system
                                            :url (format NIL "~a.html" (name system))
                                            :result result))
                        #'string< :key (lambda (e) (name (getf e :system))))))
-    (generate-html (dir tester) "index.html" "release-report"
-                   :runner (runner tester)
+    (generate-html (dir test) "index" "release-report"
+                   :runner (runner test)
                    :release release
                    :reports reports)))
 
-(defmethod test :after ((tester tester) (dist dist) &key)
-  (emit-test-result tester dist T T))
+(defmethod test :after ((test test) (release release) &key)
+  (emit-test-result test release T T))
 
-(defmethod test :after ((tester tester) (release release) &key)
-  (emit-test-result tester release T T))
+(defclass runner ()
+  ((description :initarg :description :accessor description)))
 
-(defclass program-tester (tester)
-  ((runner :accessor runner)))
+(defmethod initialize-instance :after ((runner runner) &key)
+  (setf (description runner)
+        (apply #'run-string (program runner) 
+               (eval-arguments runner '(format T "~a ~a on ~a ~a ~a"
+                                        (lisp-implementation-type) (lisp-implementation-version)
+                                        (machine-type) (software-type) (software-version))))))
 
-(defmethod initialize-instance :after ((tester program-tester) &key)
-  (setf (runner tester) (apply #'run-string (program tester) 
-                               (eval-arguments tester '(format T "~a ~a on ~a ~a ~a"
-                                                        (lisp-implementation-type) (lisp-implementation-version)
-                                                        (machine-type) (software-type) (software-version))))))
-
-(defgeneric program (program-tester))
-(defgeneric load-arguments (program-tester file))
-(defgeneric eval-arguments (program-tester form))
+(defgeneric program (runner))
+(defgeneric load-arguments (runner file))
+(defgeneric eval-arguments (runner form))
 
 (defun write-test-file (file system &key checkout-directory cache-directory run-tests verbose)
   (when verbose
@@ -140,38 +160,35 @@
         (pprint form stream)
         (terpri stream)))))
 
-(defmethod test ((tester program-tester) (system system) &rest args &key verbose &allow-other-keys)
-  (uiop:with-temporary-file (:pathname file :prefix (type-of tester) :suffix (name system) :type "lisp")
+(defmethod test ((runner runner) (system system) &rest args &key verbose &allow-other-keys)
+  (uiop:with-temporary-file (:pathname file :prefix (string (type-of runner)) :suffix (name system) :type "lisp")
     (apply #'write-test-file file system args)
-    (handler-case (emit-test-result tester system :passed (test tester file :verbose verbose))
-      (test-failure (c)
-        (emit-test-result tester system :failed (report c))
-        (error 'test-failure :tester tester :system system :report (report c))))))
+    (test runner file :verbose verbose)))
 
-(defmethod test ((tester program-tester) (file pathname) &key verbose)
+(defmethod test ((runner runner) (file pathname) &key verbose)
   (let* ((output (make-string-output-stream))
          (target (if verbose (make-broadcast-stream output *standard-output*) output)))
-    (if (< 0 (simple-inferiors:run (program tester) (load-arguments tester (pathname-utils:native-namestring file))
+    (if (< 0 (simple-inferiors:run (program runner) (load-arguments runner (pathname-utils:native-namestring file))
                                    :output target :error target))
-        (error 'test-failure :tester tester :report (get-output-stream-string output))
+        (error 'test-failure :report (get-output-stream-string output))
         (get-output-stream-string output))))
 
-(defclass sbcl (program-tester)
+(defclass sbcl (runner)
   ())
 
-(defmethod program ((tester sbcl))
+(defmethod program ((runner sbcl))
   #+windows "sbcl.exe"
   #-windows "sbcl")
 
-(defmethod load-arguments ((tester sbcl) file)
+(defmethod load-arguments ((runner sbcl) file)
   (list "--dynamic-space-size" "8Gb" "--disable-ldb" "--lose-on-corruption" "--end-runtime-options"
         "--no-sysinit" "--no-userinit" "--disable-debugger"
         "--load" (uiop:native-namestring file) "--quit"))
 
-(defmethod eval-arguments ((tester sbcl) form)
+(defmethod eval-arguments ((runner sbcl) form)
   (list "--dynamic-space-size" "8Gb" "--noinform" "--disable-ldb" "--lose-on-corruption" "--end-runtime-options"
         "--no-sysinit" "--no-userinit" "--disable-debugger"
         "--eval" (with-standard-io-syntax (prin1-to-string form)) "--quit"))
 
-(unless (boundp '*default-tester*)
-  (setf *default-tester* (make-instance 'sbcl)))
+(unless (boundp '*default-runner*)
+  (setf *default-runner* (make-instance 'sbcl)))
