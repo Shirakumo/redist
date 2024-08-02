@@ -314,6 +314,7 @@ Dists:"
         (update project))))
   (with-kernel (when jobs (parse-integer jobs))
     (test T dist :verbose (if verbose :full T)
+                 :on-error :continue
                  :use-latest-release (not update))))
 
 (defun parse-args (args &key flags chars)

@@ -147,7 +147,7 @@
 
 (defmethod test :after ((test test) (release release) &key (compile T))
   (emit-test-result test release T T)
-  (when compile (compile release)))
+  (compile release :html-only (not compile)))
 
 (defmethod index-url ((test test))
   (format NIL "/~a" (relpath (dir test) (default-output-directory))))

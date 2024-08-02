@@ -112,26 +112,27 @@ available-versions-url: ~a"
         ;;        need to be careful to not remove files from shared releases
         (setf (releases dist) (remove release (releases dist)))))))
 
-(defmethod compile ((release release) &key (output (default-output-directory)) (if-exists :supersede) verbose force)
+(defmethod compile ((release release) &key (output (default-output-directory)) (if-exists :supersede) verbose force html-only)
   (when verbose
     (verbose "Compiling release ~a" (version release)))
   (ensure-directories-exist output)
   (flet ((f (path)
            (ensure-directories-exist (merge-pathnames path output))))
-    (do-list* (project (projects release))
-      (compile project :output output :if-exists if-exists :verbose verbose :force force))
-    (with-open-file (stream (f (dist-path release))
-                            :direction :output
-                            :if-exists if-exists)
-      (write-dist-index release stream))
-    (with-open-file (stream (f (releases-path release))
-                            :direction :output
-                            :if-exists if-exists)
-      (write-release-index release output stream))
-    (with-open-file (stream (f (systems-path release))
-                            :direction :output
-                            :if-exists if-exists)
-      (write-system-index release stream))
+    (unless html-only
+      (do-list* (project (projects release))
+        (compile project :output output :if-exists if-exists :verbose verbose :force force))
+      (with-open-file (stream (f (dist-path release))
+                              :direction :output
+                              :if-exists if-exists)
+        (write-dist-index release stream))
+      (with-open-file (stream (f (releases-path release))
+                              :direction :output
+                              :if-exists if-exists)
+        (write-release-index release output stream))
+      (with-open-file (stream (f (systems-path release))
+                              :direction :output
+                              :if-exists if-exists)
+        (write-system-index release stream)))
     (generate-html (f (dist-path release)) "index" "release" :release release)
     release))
 
