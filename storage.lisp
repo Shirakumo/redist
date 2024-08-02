@@ -127,9 +127,15 @@
     (retrieve *storage* 'dist T))
   (sort (alexandria:hash-table-values *dists*) #'string< :key #'name))
 
+(defmethod project ((name symbol))
+  (project (string name)))
+
 (defmethod project ((name string))
   (or (gethash name *projects*)
       (when *storage* (retrieve *storage* 'project name))))
+
+(defmethod (setf project) (project (name symbol))
+  (setf (project (string name)) project))
 
 (defmethod (setf project) (project (name string))
   (setf (gethash name *projects*) project))
