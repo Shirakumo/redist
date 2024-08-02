@@ -226,3 +226,13 @@
       (rec obj))
     (ironclad:byte-array-to-hex-string
      (ironclad:produce-digest state))))
+
+(defun format-timestamp (&optional (format :datetime) (stamp (get-universal-time)))
+  (multiple-value-bind (s m h dd mm yy) (decode-universal-time stamp 0)
+    (ecase format
+      (:datetime
+       (format NIL "~4,'0d.~2,'0d.~2,'0d-~2,'0d.~2,'0d.~2,'0d" yy mm dd h m s))
+      (:date
+       (format NIL "~4,'0d-~2,'0d-~2,'0d" yy mm dd))
+      (:time
+       (format NIL "~2,'0d.~2,'0d.~2,'0d" h m s)))))

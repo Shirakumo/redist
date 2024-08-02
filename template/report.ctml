@@ -27,11 +27,11 @@
         </div>
         <div class="row">
           <label>Date:</label>
-          <span lquery="(time (get-universal-time))">TIME</span>
+          <span lquery="(time (timestamp test))">TIME</span>
         </div>
         <div class="row">
           <label>Runner:</label>
-          <span lquery="(text runner)">RUNNER</span>
+          <span lquery="(text (description (runner test)))">RUNNER</span>
         </div>
         <div class="row">
           <label>Test Result:</label>

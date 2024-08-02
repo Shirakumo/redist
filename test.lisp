@@ -22,7 +22,7 @@
 (defun report-directory (&rest dirs)
   (apply #'pathname-utils:subdirectory
          (or *default-report-directory*
-             (pathname-utils:subdirectory (storage-file) "reports"))
+             (pathname-utils:subdirectory (default-output-directory) "reports"))
          (mapcar #'string dirs)))
 
 (defun cache-directory (&rest dirs)
@@ -33,16 +33,31 @@
 
 (defclass test ()
   ((results :initform (make-hash-table :test 'eq) :accessor results)
-   (runner :initform *default-runner* :accessor runner)))
+   (runner :initarg :runner :initform *default-runner* :accessor runner)
+   (timestamp :initarg :timestamp :initform (get-universal-time) :accessor timestamp)))
+
+(defmethod print-object ((test test) stream)
+  (print-unreadable-object (test stream :type T)
+    (format stream "~a ~a" (format-timestamp :datetime (timestamp test)) (result test))))
 
 (defgeneric emit-test-result (test system result report))
 (defgeneric test (test project &key))
+
+(defmethod result ((test test))
+  (loop for result being the hash-values of (results test)
+        do (when (eq result :failed) (return :failed))
+           (when (eq result :errored) (return :errored))
+        finally (return :passed)))
 
 (defmethod emit-test-result ((test test) (system system) result report)
   (setf (gethash system (results test)) result))
 
 (defmethod test ((test (eql T)) thing &rest args &key &allow-other-keys)
   (apply #'test (make-instance 'reporting-test) thing args))
+
+(defmethod test :around ((test test) thing &key)
+  (call-next-method)
+  test)
 
 (defmethod test ((test test) (project project) &rest args &key &allow-other-keys)
   (do-list* (system (systems project))
@@ -66,14 +81,17 @@
     (with-simple-restart (continue "Ignore the failing project.")
       (apply #'test test project :checkout-directory checkout-directory :cache-directory cache-directory args))))
 
-(defmethod test ((test test) (dist dist) &rest args &key &allow-other-keys)
-  (apply #'test test (make-instance 'release :dist dist :version (next-version dist)) args))
+(defmethod test ((test test) (dist dist) &rest args &key (use-latest-release T) &allow-other-keys)
+  (apply #'test test (if use-latest-release
+                         (first (releases dist))
+                         (make-instance 'release :dist dist :version (next-version dist)))
+         args))
 
 (defmethod test ((test test) (name string) &rest args &key &allow-other-keys)
-  (apply #'test test (dist name) args))
+  (apply #'test test (or (dist name) (error "No such dist ~s" name)) args))
 
 (defmethod test ((test test) (name symbol) &rest args &key &allow-other-keys)
-  (apply #'test test (dist name) args))
+  (apply #'test test (or (dist name) (error "No such dist ~s" name)) args))
 
 (defmethod test ((test test) (system system) &rest args &key &allow-other-keys)
   (tagbody retry
@@ -86,9 +104,7 @@
                         (error
                           (lambda (e)
                             (emit-test-result test system :errored (princ-to-string e)))))
-           (let ((report (apply #'test (runner test) system args)))
-             (emit-test-result test system :passed report)
-             report))
+           (emit-test-result test system :passed (apply #'test (runner test) system args)))
        (retry ()
          :report "Retry testing the system."
          (go retry))
@@ -106,7 +122,7 @@
 
 (defmethod emit-test-result :after ((test reporting-test) (system system) result report)
   (generate-html (dir test) (name system) "report"
-                 :runner (runner test)
+                 :test test
                  :system system
                  :result result
                  :report report))
@@ -118,12 +134,15 @@
                                            :result result))
                        #'string< :key (lambda (e) (name (getf e :system))))))
     (generate-html (dir test) "index" "release-report"
-                   :runner (runner test)
+                   :test test
                    :release release
                    :reports reports)))
 
 (defmethod test :after ((test test) (release release) &key)
   (emit-test-result test release T T))
+
+(defmethod index-url ((test test))
+  (format NIL "/~a" (relpath (dir test) (default-output-directory))))
 
 (defclass runner ()
   ((description :initarg :description :accessor description)))
@@ -153,17 +172,19 @@
                                                                        collect `(:tree ,(pathname-utils:native-namestring dir)))))))
                       ,@(when cache-directory
                           `((asdf:initialize-output-translations '(:output-translations :ignore-inherited-configuration (T (,(pathname-utils:native-namestring cache-directory) :implementation))))))
-                      (asdf:load-system ',(name system))
+                      (asdf:load-system ',(name system) :force T)
                       ,@(when run-tests
                           `((setf cl-user::*exit-on-test-failures* T) ; Not standardised.
-                            (asdf:test-system ',(name system))))))
+                            (asdf:test-system ',(name system))))
+                      (format T "~&~%~%; Test completed successfully!~%")
+                      (uiop:quit 0)))
         (pprint form stream)
         (terpri stream)))))
 
 (defmethod test ((runner runner) (system system) &rest args &key verbose &allow-other-keys)
   (uiop:with-temporary-file (:pathname file :prefix (string (type-of runner)) :suffix (name system) :type "lisp")
     (apply #'write-test-file file system args)
-    (test runner file :verbose verbose)))
+    (test runner file :verbose (eql verbose :full))))
 
 (defmethod test ((runner runner) (file pathname) &key verbose)
   (let* ((output (make-string-output-stream))

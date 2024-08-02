@@ -54,8 +54,13 @@
     :white-space nowrap
     :text-overflow ellipsis))
 
-  ((.row label)
-   :font-weight bold)
+  (.row
+   :display flex
+   (label
+    :font-weight bold)
+   (span
+    :overflow hidden
+    :text-overflow ellipsis))
 
   (.dependencies
    :white-space normal
@@ -72,7 +77,9 @@
    :font-size 0.8em)
   (.version.note
    :font-size 0.75em
-   :color (hex A0A0A0)))
+   :color (hex A0A0A0))
+  ((.output pre code)
+   :overflow auto))
 
  (>footer
   :margin 1em

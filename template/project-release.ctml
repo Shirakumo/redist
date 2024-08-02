@@ -15,7 +15,7 @@
       <section class="info" id="info">
         <div class="row">
           <label>Project:</label>
-          <a lquery="(attr :href (index-url *)) (text (name (project release)))">PROJECT</a>
+          <a lquery="(attr :href (index-url (project release))) (text (name (project release)))">PROJECT</a>
         </div>
         <div class="row">
           <label>Version:</label>

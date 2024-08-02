@@ -143,16 +143,13 @@ Versions:~12t~a~%"
   ())
 
 (defmethod next-version ((dist timestamp-versioned-dist))
-  (multiple-value-bind (s m h dd mm yy) (decode-universal-time (get-universal-time) 0)
-    (format NIL "~4,'0d.~2,'0d.~2,'0d-~2,'0d.~2,'0d.~2,'0d" yy mm dd h m s)))
+  (format-timestamp :datetime))
 
 (defclass date-versioned-dist (dist)
   ())
 
 (defmethod next-version ((dist date-versioned-dist))
-  (multiple-value-bind (s m h dd mm yy) (decode-universal-time (get-universal-time) 0)
-    (declare (ignore s m h))
-    (format NIL "~4,'0d-~2,'0d-~2,'0d" yy mm dd)))
+  (format-timestamp :date))
 
 (defmethod retrieve-all :after ((storage storage) (object dist))
   (dolist (object (releases object))
