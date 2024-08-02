@@ -148,6 +148,15 @@ archive               Update the release archives
      --version version   Update only the given version
   -v --verbose           To print verbose output about the progress
 
+test                  Test a dist release
+  name                   The name of the dist to test a release of
+  -u --update            If specified will update associated projects
+                         first and create a new release to run the
+                         tests on. The release won't be published.
+  -v --verbose           If specified shows the output of the tests
+  -j --jobs N            Make the testing threaded. This does *not*
+                         pair well with -v.
+
 install               Install a Systemd service. Requires root.
   -i --interval interval Set the timer interval. Defaults to monthly
   -e --enable            Enable the service
@@ -297,6 +306,15 @@ Dists:"
 
 (defun main/install (&key enable (interval "monthly"))
   (create-systemd-service :enable enable :interval interval))
+
+(defun main/test (dist &key update verbose jobs)
+  (when update
+    (with-kernel (when jobs (parse-integer jobs))
+      (dolist (project (projects dist))
+        (update project))))
+  (with-kernel (when jobs (parse-integer jobs))
+    (test T dist :verbose (if verbose :full T)
+                 :use-latest-release (not update))))
 
 (defun parse-args (args &key flags chars)
   (let ((kargs ())

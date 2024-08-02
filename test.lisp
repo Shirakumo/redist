@@ -41,7 +41,7 @@
     (format stream "~a ~a" (format-timestamp :datetime (timestamp test)) (result test))))
 
 (defgeneric emit-test-result (test system result report))
-(defgeneric test (test project &key))
+(defgeneric test (test dist &key))
 
 (defmethod result ((test test))
   (loop for result being the hash-values of (results test)
@@ -80,8 +80,8 @@
       (apply #'test test system args))))
 
 (defmethod test ((test test) (release release) &rest args &key (checkout-directory (checkout-directory (name (dist release)) (version release)))
-                                                                   (cache-directory (cache-directory (name (dist release)) (version release)))
-                                                                   verbose
+                                                               (cache-directory (cache-directory (name (dist release)) (version release)))
+                                                               verbose
                  &allow-other-keys)
   (when verbose (verbose "Ensuring checkout in ~a" checkout-directory))
   (do-list* (project (projects release))
