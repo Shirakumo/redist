@@ -254,6 +254,10 @@
   ((project :initarg :project :initform (arg! :project) :accessor project)
    (version :initarg :version :initform NIL :accessor version)))
 
+(defmethod checkout ((manager dist-source) target &key &allow-other-keys)
+  (filesystem-utils:delete-directory target)
+  (filesystem-utils:copy-file simple-inferiors:*cwd* target :skip-root T))
+
 (defmethod clone ((manager dist-source) &key version shallow)
   (declare (ignore shallow))
   (ensure-directories-exist simple-inferiors:*cwd*)
