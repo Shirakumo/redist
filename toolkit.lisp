@@ -130,9 +130,14 @@
                  (symbol (list (string arg))))))
 
 (defun run (command &rest args)
-  (loop (with-simple-restart (retry "Retry running the program")
-          (return (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
-                                        (coerce-args args) :on-non-zero-exit :error)))))
+  (let ((output (make-string-output-stream)))
+    (loop (with-simple-restart (retry "Retry running the program")
+            (let ((exit (simple-inferiors:run #-windows command #+windows (format NIL "~a.exe" command)
+                                              (coerce-args args) :output output :error output)))
+              (if (= 0 exit)
+                  (return exit)
+                  (error "Failed to run~%~%  ~a~{ ~a~}~%~%It exited with code ~a and output:~%~%  ~a"
+                         command args exit (get-output-stream-string output))))))))
 
 (defun run-string (command &rest args)
   (loop (with-simple-restart (retry "Retry running the program")
