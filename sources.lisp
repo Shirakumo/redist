@@ -155,7 +155,7 @@
          (run "git" "fetch" "origin")
          (run "git" "reset" "--hard" (cond ((tag manager)
                                             (if (eql :latest (tag manager))
-                                                (simple-inferiors:run "git" (list "describe" "--tags" "--abbrev=0") :output :string)
+                                                (run-string "git" "describe" "--tags" "--abbrev=0")
                                                 (tag manager)))
                                            ((branch manager) (format NIL "origin/~a" (branch manager)))
                                            (T (run-string "git" "rev-parse" "--abbrev-ref" "origin/HEAD")))))))
