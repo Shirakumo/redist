@@ -22,7 +22,14 @@
   (when releases-p
     (setf (releases dist) releases))
   (when type
-    (change-class dist type)))
+    (change-class dist type))
+  (unless (stored-p dist)
+    (unless (slot-boundp dist 'projects)
+      (setf (projects dist) ()))
+    (unless (slot-boundp dist 'releases)
+      (setf (releases dist) ()))
+    (unless (slot-boundp dist 'excluded-paths)
+      (setf (excluded-paths dist) *excluded-paths*))))
 
 (defmethod print-object ((dist dist) stream)
   (print-unreadable-object (dist stream :type T)
