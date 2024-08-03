@@ -83,7 +83,8 @@
                    (setf (project name) project))
                   ((loop for source in (sources project) never (typep source 'dist-source))
                    (when verbose (verbose "Adding dist source to ~a" name))
-                   (setf (sources project) (append (sources project) (list source)))))
+                   (reinitialize-instance project :sources (append (sources project) (list source))
+                                                  :disabled-p NIL)))
             (pushnew project (projects dist))
             (let ((release (find-release version project)))
               (unless release
