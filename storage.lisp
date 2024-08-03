@@ -122,6 +122,10 @@
 (defmethod (setf dist) (dist (name string))
   (setf (gethash name *dists*) dist))
 
+(defmethod (setf dist) ((dist null) (name string))
+  (remhash dist *dists*)
+  NIL)
+
 (defun list-dists ()
   (when (and *storage* (= 0 (hash-table-count *dists*)))
     (retrieve *storage* 'dist T))
@@ -139,6 +143,10 @@
 
 (defmethod (setf project) (project (name string))
   (setf (gethash name *projects*) project))
+
+(defmethod (setf project) ((project null) (name string))
+  (remhash project *projects*)
+  NIL)
 
 (defun list-projects ()
   (when (and *storage* (= 0 (hash-table-count *projects*)))
