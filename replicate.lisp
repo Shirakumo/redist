@@ -75,12 +75,15 @@
       (do-list* (data releases)
         (destructuring-bind (&key name url archive-md5 source-sha1 &allow-other-keys) data
           (let ((project (project name))
-                (version source-sha1))
-            (unless project
-              (when verbose (verbose "Creating ~a" name))
-              (let ((source (make-instance 'dist-source :url disturl :project name)))
-                (setf project (make-instance 'project :name name :sources (list source) :verbose verbose))
-                (setf (project name) project)))
+                (version source-sha1)
+                (source (make-instance 'dist-source :url disturl :project name)))
+            (cond ((null project)
+                   (when verbose (verbose "Creating ~a" name))
+                   (setf project (make-instance 'project :name name :sources (list source) :verbose verbose))
+                   (setf (project name) project))
+                  ((loop for source in (sources project) never (typep source 'dist-source))
+                   (when verbose (verbose "Adding dist source to ~a" name))
+                   (setf (sources project) (append (sources project) (list source)))))
             (pushnew project (projects dist))
             (let ((release (find-release version project)))
               (unless release
@@ -92,6 +95,7 @@
                                              :source-sha1 source-sha1
                                              :systems (loop for data in (gethash name systems)
                                                             collect (list* (getf data :name) data))))
+                (push release (releases project))
                 (when download-archives
                   (let ((target (merge-pathnames (path release) (default-output-directory))))
                     (unless (probe-file target)
