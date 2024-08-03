@@ -166,7 +166,10 @@ Versions:~12t~a~%"
     (loop for source in (sources project)
           do (restart-case (return (apply #'checkout source path :version version args))
                (continue ()
-                 :report "Try the next source."))
+                 :report "Try the next source.")
+               (remove ()
+                 :report "Remove the source and try the next one."
+                 (setf (sources project) (remove source (sources project)))))
           finally (error "No capable source to clone~%  ~a" project))))
 
 (defmethod update ((project project) &rest args &key version &allow-other-keys)
@@ -177,7 +180,10 @@ Versions:~12t~a~%"
       (loop for source in (sources project)
             do (restart-case (return (apply #'update source args))
                  (continue ()
-                   :report "Try the next source."))
+                   :report "Try the next source.")
+                 (remove ()
+                   :report "Remove the source and try the next one."
+                   (setf (sources project) (remove source (sources project)))))
             finally (cerror "Ignore the update failure." "No capable source to update~%  ~a"
                             project))
       (let ((release (find-release (version project) project)))
@@ -192,7 +198,10 @@ Versions:~12t~a~%"
     (loop for source in (sources project)
           do (restart-case (return (apply #'clone source args))
                (continue ()
-                 :report "Try the next source."))
+                 :report "Try the next source.")
+               (remove ()
+                 :report "Remove the source and try the next one."
+                 (setf (sources project) (remove source (sources project)))))
           finally (error "No capable source to clone~%  ~a" project))))
 
 (defmethod version ((project project))
