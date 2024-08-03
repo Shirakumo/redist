@@ -56,8 +56,10 @@
          (dist (ensure-instance (dist name) type :name name :url (gethash "archive-base-url" distinfo))))
     (if current-version-only
         (replicate-dist-version dist disturl :verbose verbose :disturl disturl :download-archives download-archives)
-        (loop for url being the hash-values of (fetch (available-versions-url distinfo) #'read-dist-releases-index verbose)
-              do (replicate-dist-version dist url :verbose verbose :disturl disturl :download-archives download-archives)))
+        (let* ((versions (fetch (available-versions-url distinfo) #'read-dist-releases-index verbose))
+               (versions (loop for url being the hash-values of versions collect url)))
+          (do-list* (url versions)
+            (replicate-dist-version dist url :verbose verbose :disturl disturl :download-archives download-archives))))
     (setf (dist name) dist)))
 
 (defun replicate-dist-version (dist url &key (verbose T) disturl (download-archives T))
@@ -65,36 +67,37 @@
          (disturl (or disturl (format NIL "~a/~a.txt" (url dist) (name dist))))
          (version (gethash "version" distinfo))
          (releases (fetch (gethash "release-index-url" distinfo) #'read-release-index verbose))
+         (releases (loop for data being the hash-values of releases collect data))
          (systems (fetch (gethash "system-index-url" distinfo) #'read-system-index verbose))
          (dist-release (find-release version dist))
          (project-releases ()))
     (unless dist-release
-      (loop for data being the hash-values of releases
-            do (destructuring-bind (&key name url archive-md5 source-sha1 &allow-other-keys) data
-                 (let ((project (project name))
-                       (version source-sha1))
-                   (unless project
-                     (when verbose (verbose "Creating ~a" name))
-                     (let ((source (make-instance 'dist-source :url disturl :project name)))
-                       (setf project (make-instance 'project :name name :sources (list source) :verbose verbose))
-                       (setf (project name) project)))
-                   (pushnew project (projects dist))
-                   (let ((release (find-release version project)))
-                     (unless release
-                       (when verbose (verbose "Creating ~a / ~a" name version))
-                       (setf release (make-instance 'project-release
-                                                    :project project
-                                                    :version version
-                                                    :archive-md5 archive-md5
-                                                    :source-sha1 source-sha1
-                                                    :systems (loop for data in (gethash name systems)
-                                                                   collect (list* (getf data :name) data))))
-                       (when download-archives
-                         (let ((target (merge-pathnames (path release) (default-output-directory))))
-                           (unless (probe-file target)
-                             (ensure-directories-exist target)
-                             (run "curl" "-L" "-o" target url)))))
-                     (push release project-releases)))))
+      (do-list* (data releases)
+        (destructuring-bind (&key name url archive-md5 source-sha1 &allow-other-keys) data
+          (let ((project (project name))
+                (version source-sha1))
+            (unless project
+              (when verbose (verbose "Creating ~a" name))
+              (let ((source (make-instance 'dist-source :url disturl :project name)))
+                (setf project (make-instance 'project :name name :sources (list source) :verbose verbose))
+                (setf (project name) project)))
+            (pushnew project (projects dist))
+            (let ((release (find-release version project)))
+              (unless release
+                (when verbose (verbose "Creating ~a / ~a" name version))
+                (setf release (make-instance 'project-release
+                                             :project project
+                                             :version version
+                                             :archive-md5 archive-md5
+                                             :source-sha1 source-sha1
+                                             :systems (loop for data in (gethash name systems)
+                                                            collect (list* (getf data :name) data))))
+                (when download-archives
+                  (let ((target (merge-pathnames (path release) (default-output-directory))))
+                    (unless (probe-file target)
+                      (ensure-directories-exist target)
+                      (run "curl" "-L" "-o" target url)))))
+              (push release project-releases)))))
       (when verbose (verbose "Creating ~a / ~a" (name dist) version))
       (setf dist-release (ensure-release (list version
                                                :timestamp (parse-time version :error NIL :time-zone 0 :default (get-universal-time))
