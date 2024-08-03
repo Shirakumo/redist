@@ -160,49 +160,40 @@ Versions:~12t~a~%"
 (defmethod add-project (thingy (dist dist))
   (add-project (ensure-project thingy) dist))
 
-(defmethod checkout ((project project) path &rest args &key (version (version project)) &allow-other-keys)
-  (ensure-directories-exist path)
+(defun try-sources (project operation)
   (simple-inferiors:with-chdir ((source-directory project))
     (loop for source in (sources project)
-          do (restart-case (return (apply #'checkout source path :version version args))
-               (continue ()
-                 :report "Try the next source.")
-               (remove ()
+          do (restart-case (return (funcall operation source))
+               (continue (&optional e)
+                 :report "Try the next source."
+                 (declare (ignore e)))
+               (remove (&optional e)
                  :report "Remove the source and try the next one."
+                 (declare (ignore e))
                  (setf (sources project) (remove source (sources project)))))
-          finally (error "No capable source to clone~%  ~a" project))))
+          finally (error "No capable source for~%  ~a" project))))
+
+(defmethod check-remote ((project project))
+  (try-sources project #'check-remote))
+
+(defmethod checkout ((project project) path &rest args &key (version (version project)) &allow-other-keys)
+  (ensure-directories-exist path)
+  (try-sources project (lambda (source) (apply #'checkout source path :version version args))))
 
 (defmethod update ((project project) &rest args &key version &allow-other-keys)
   (when (or (null version)
             (not (equal (version project) version)))
-    (simple-inferiors:with-chdir ((source-directory project))
-      (setf (version-cache project) NIL)
-      (loop for source in (sources project)
-            do (restart-case (return (apply #'update source args))
-                 (continue ()
-                   :report "Try the next source.")
-                 (remove ()
-                   :report "Remove the source and try the next one."
-                   (setf (sources project) (remove source (sources project)))))
-            finally (cerror "Ignore the update failure." "No capable source to update~%  ~a"
-                            project))
-      (let ((release (find-release (version project) project)))
-        (when release
-          (setf (source-files release) T)))
-      project)))
+    (setf (version-cache project) NIL)
+    (try-sources project (lambda (source) (apply #'update source args)))
+    (let ((release (find-release (version project) project)))
+      (when release
+        (setf (source-files release) T)))
+    project))
 
 (defmethod clone ((project project) &rest args &key &allow-other-keys)
   (ensure-directories-exist (source-directory project))
-  (simple-inferiors:with-chdir ((source-directory project))
-    (setf (version-cache project) NIL)
-    (loop for source in (sources project)
-          do (restart-case (return (apply #'clone source args))
-               (continue ()
-                 :report "Try the next source.")
-               (remove ()
-                 :report "Remove the source and try the next one."
-                 (setf (sources project) (remove source (sources project)))))
-          finally (error "No capable source to clone~%  ~a" project))))
+  (setf (version-cache project) NIL)
+  (try-sources project (lambda (source) (apply #'clone source args))))
 
 (defmethod version ((project project))
   (or (version-cache project)
