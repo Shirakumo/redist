@@ -10,6 +10,7 @@
 (defgeneric version (manager))
 (defgeneric update (manager &key))
 (defgeneric clone (manager &key))
+(defgeneric check-remote (manager))
 
 (defmethod checkout ((manager source-manager) target &rest args &key version &allow-other-keys)
   (simple-inferiors:with-chdir (target)
@@ -63,6 +64,9 @@
   (run "cvs" "-d" (url manager) "update"
        "-d" "-D" (or version "1 second ago")))
 
+(defmethod check-remote ((manager cvs))
+  (run "cvs" "-d" (url manager) "-n" "update"))
+
 (defclass svn (source-manager)
   ())
 
@@ -81,6 +85,9 @@
 (defmethod version ((manager svn))
   (run-string "svn" "info"
               "--show-item" "last-changed-revision"))
+
+(defmethod check-remote ((manager svn))
+  (run "svn" "status" "-u"))
 
 (defclass darcs (source-manager)
   ())
@@ -103,6 +110,9 @@
     (let ((line (read-line stream)))
       (subseq line (1+ (position #\Space line))))))
 
+(defmethod check-remote ((manager darcs))
+  (run "darcs" "pull" "--dry-run"))
+
 (defclass mercurial (source-manager)
   ())
 
@@ -119,6 +129,9 @@
 
 (defmethod version ((manager mercurial))
   (run-string "hg" "id" "-i"))
+
+(defmethod check-remote ((manager mercurial))
+  (run "hg" "pull"))
 
 (defclass git (source-manager)
   ((branch :initarg :branch :initform NIL :accessor branch)
@@ -163,6 +176,9 @@
 (defmethod version ((manager git))
   (run-string "git" "rev-parse" "HEAD"))
 
+(defmethod check-remote ((manager git))
+  (run "git" "fetch" "origin"))
+
 (defun download-source (url &key strip-root)
   (let* ((name (subseq url (1+ (position #\/ url :from-end T))))
          (temp (tempfile)))
@@ -204,6 +220,9 @@
 
 (defmethod update ((manager http) &rest args &key &allow-other-keys)
   (apply #'clone manager args))
+
+(defmethod check-remote ((manager http))
+  (run "curl" "-sSf" (url manager)))
 
 (defclass github (git)
   ((track :initarg :track :initform (arg! :track) :accessor track)))
@@ -281,6 +300,9 @@
 
 (defmethod update ((manager dist-source) &rest args &key &allow-other-keys)
   (apply #'clone manager args))
+
+(defmethod check-remote ((manager dist-source))
+  (run "curl" "-sSf" (url manager)))
 
 (defmethod serialize append ((manager dist-source))
   (prune-plist
