@@ -256,6 +256,7 @@
 
 (defmethod clone ((manager dist-source) &key version shallow)
   (declare (ignore shallow))
+  (ensure-directories-exist simple-inferiors:*cwd*)
   (let* ((index (fetch (url manager) #'read-dist-index))
          (versions (gethash "available-versions-url" index)))
     (when (and version versions)
