@@ -132,12 +132,8 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
     (setf (systems release) systems))
   (unless (stored-p release)
     (if (slot-boundp release 'source-files)
-        (loop for cons on (source-files release)
-              do (setf (car cons) (absolutize (car cons) (source-directory (project release)))))
-        (setf (source-files release)
-              (gather-sources (source-directory (project release))
-                              (append (excluded-paths (project release))
-                                      *excluded-paths*))))
+        (setf (source-files release) (source-files release))
+        (setf (source-files release) T))
     (unless (slot-boundp release 'systems)
       (setf (systems release) T))))
 
@@ -146,6 +142,10 @@ Projects:~12t~{~a ~a~^~%~12t~}~%"
                                                (append (excluded-paths (project release))
                                                        *excluded-paths*)))
   (setf (source-sha1 release) (digest (source-files release) :sha1)))
+
+(defmethod (setf source-files) :after ((files cons) (release project-release))
+  (loop for cons on (source-files release)
+        do (setf (car cons) (absolutize (car cons) (source-directory (project release))))))
 
 (defmethod print-object ((release project-release) stream)
   (print-unreadable-object (release stream :type T)
