@@ -8,11 +8,11 @@
 
 (defun storage-file ()
   (flet ((try (dir file)
-           (when dir (merge-pathnames file dir))))
+           (when dir (merge-pathnames file (pathname-utils:to-directory dir)))))
     (let ((dirs (list (try *default-source-directory* "../")
                       (try *default-output-directory* "../")
                       (try (user-homedir-pathname) "dist/")
-                      (pathname-utils:to-directory (truename (first (uiop:raw-command-line-arguments)))))))
+                      (try (probe-file (first (uiop:raw-command-line-arguments))) ""))))
       (or *storage-file*
           (loop for dir in dirs
                 thereis (loop for type in (list-storage-file-types)
