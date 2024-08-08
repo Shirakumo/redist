@@ -89,8 +89,11 @@
 
 (defun retrieve-listed (object slot type existing)
   (loop for id in (retrieve-plaintext object slot)
+        for file = (plaintext-file type id)
         collect (apply #'ensure-instance (find id existing :key #'id) type
-                       (read-plaintext (plaintext-file type id)))))
+                       (or (read-plaintext file)
+                           (error "~a is referencing an ~a with ID ~a, which does not exist in storage!"
+                                  object type id)))))
 
 (defmethod retrieve ((*storage* plaintext) (object (eql 'dist)) (name string))
   (let ((file (plaintext-file 'dist name)))
