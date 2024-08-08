@@ -44,6 +44,9 @@
     (when truename
       (setf *storage* (open-storage truename T)))))
 
+(defmacro without-storing (&body body)
+  `(let ((*retrieving* T)) ,@body))
+
 (defclass stored-object ()
   ((id :initarg :id :writer (setf id))))
 
@@ -55,6 +58,14 @@
     (store *storage* object T))
   (slot-value object 'id))
 
+(defmethod initialize-instance :around ((object stored-object) &key)
+  (without-storing (call-next-method)))
+
+(defmethod shared-initialize :around ((object stored-object) slots &key)
+  (if (stored-p object)
+      (call-next-method)
+      (without-storing (call-next-method))))
+
 (defmethod c2mop:slot-value-using-class :before ((class c2mop:standard-class) (object stored-object) slotd)
   (when (and *storage* (not (c2mop:slot-boundp-using-class class object slotd)))
     (retrieve *storage* object (c2mop:slot-definition-name slotd))))
@@ -64,7 +75,7 @@
     (store *storage* object (c2mop:slot-definition-name slotd))))
 
 (defmethod retrieve :around ((storage storage) (object stored-object) slot)
-  (let ((*retrieving* T))
+  (without-storing
     (call-next-method)))
 
 (defmethod retrieve ((storage storage) (object stored-object) slot))
@@ -110,7 +121,7 @@
   (clrhash *projects*))
 
 (defmethod dist ((name symbol))
-  (dist (string name)))
+  (dist (string-downcase name)))
 
 (defmethod dist ((name string))
   (or (gethash name *dists*)
@@ -132,7 +143,7 @@
   (sort (alexandria:hash-table-values *dists*) #'string< :key #'name))
 
 (defmethod project ((name symbol))
-  (project (string name)))
+  (project (string-downcase name)))
 
 (defmethod project ((name string))
   (or (gethash name *projects*)
