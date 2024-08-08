@@ -80,8 +80,8 @@ Versions:~12t~a~%"
                      (make-instance 'release :dist dist :version version :update update :verbose verbose)))
         (prior (first (releases dist))))
     (cond ((and prior (loop for project in (projects release)
-                            always (equal (version project)
-                                          (version (find-project (project project) prior)))))
+                            for project-release = (find-project (project project) prior)
+                            always (and project-release (equal (version project) (version project-release)))))
            (cerror "Re-use the old release" "The last release ~a on ~a has identical project releases."
                    prior dist)
            prior)
