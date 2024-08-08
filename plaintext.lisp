@@ -127,7 +127,7 @@
   (apply #'reinitialize-instance object (retrieve-plaintext object)))
 
 (defmethod retrieve ((*storage* plaintext) (object release) (slot (eql 'projects)))
-  (setf (projects object) (retrieve-listed object slot 'project
+  (setf (projects object) (retrieve-listed object slot 'project-release
                                            (if (slot-boundp object 'projects) (projects object) ()))))
 
 (defmethod retrieve ((*storage* plaintext) (object (eql 'project)) (name string))
