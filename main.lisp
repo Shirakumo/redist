@@ -359,6 +359,7 @@ Dists:"
                               (invoke-debugger e))
                              (T
                               (format *error-output* "~&ERROR: ~a~%" e)
+                              (lparallel:end-kernel)
                               (uiop:print-condition-backtrace e)
                               (uiop:quit 2)))))
                    (warning
@@ -369,6 +370,7 @@ Dists:"
                    (sb-sys:interactive-interrupt
                      (lambda (e)
                        (format *error-output* "~&Interactive interrupt~%")
+                       (lparallel:end-kernel)
                        (uiop:quit 1))))
       (destructuring-bind (command . args) args
         (let ((cmdfun (find-symbol (format NIL "~a/~:@(~a~)" 'main command) #.*package*)))
