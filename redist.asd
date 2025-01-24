@@ -49,4 +49,4 @@
   :build-pathname "redist"
   :entry-point "org.shirakumo.redist::main"
   :components ((:file "main"))
-  :depends-on (:uiop :redist :redist/sqlite))
+  :depends-on (:uiop :redist))

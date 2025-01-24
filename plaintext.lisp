@@ -22,6 +22,10 @@
             (:create (store *storage* T T))
             ((NIL)))))))
 
+(defmethod print-object ((storage plaintext) stream)
+  (print-unreadable-object (storage stream :type T)
+    (format NIL "~a" (dir storage))))
+
 (defmethod store :after ((*storage* plaintext) (all (eql T)) (all2 (eql T)))
   (with-open-file (stream (file *storage*) :direction :output :if-exists :supersede)
     (with-standard-io-syntax

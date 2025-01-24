@@ -47,7 +47,7 @@
 (defun ensure-storage (&key (file (storage-file)))
   (or *storage*
       (progn (verbose "Creating storage in ~a" file)
-             (setf *storage* (open-storage file T)))))
+             (setf *storage* (open-storage (ensure-directories-exist file) T)))))
 
 (defmacro without-storing (&body body)
   `(let ((*retrieving* T)) ,@body))

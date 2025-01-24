@@ -399,9 +399,5 @@ Dists:"
                                                             #\s :skip-archives
                                                             #\i :interval #\e :enable)))
           (when *storage*
-            (verbose "Offloading to ~a" *storage*)
             (store T T T)))))
     (uiop:quit)))
-
-;; Sigh.
-(cffi:close-foreign-library 'sqlite-ffi::sqlite3-lib)
