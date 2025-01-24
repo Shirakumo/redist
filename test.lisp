@@ -153,14 +153,15 @@
   (format NIL "/~a" (relpath (dir test) (default-output-directory))))
 
 (defclass runner ()
-  ((description :initarg :description :accessor description)))
+  ((description :initarg :description :initform NIL :accessor description)))
 
-(defmethod initialize-instance :after ((runner runner) &key)
-  (setf (description runner)
-        (apply #'run-string (program runner) 
-               (eval-arguments runner '(format T "~a ~a on ~a ~a ~a"
-                                        (lisp-implementation-type) (lisp-implementation-version)
-                                        (machine-type) (software-type) (software-version))))))
+(defmethod description ((runner runner))
+  (let ((val (slot-value runner 'description)))
+    (or val (setf (description runner)
+                  (apply #'run-string (program runner) 
+                         (eval-arguments runner '(format T "~a ~a on ~a ~a ~a"
+                                                  (lisp-implementation-type) (lisp-implementation-version)
+                                                  (machine-type) (software-type) (software-version))))))))
 
 (defgeneric program (runner))
 (defgeneric load-arguments (runner file))
