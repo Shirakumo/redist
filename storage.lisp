@@ -44,6 +44,11 @@
     (when truename
       (setf *storage* (open-storage truename T)))))
 
+(defun ensure-storage (&key (file (storage-file)))
+  (or *storage*
+      (progn (verbose "Creating storage in ~a" file)
+             (setf *storage* (open-storage file T)))))
+
 (defmacro without-storing (&body body)
   `(let ((*retrieving* T)) ,@body))
 

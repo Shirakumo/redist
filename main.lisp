@@ -261,29 +261,36 @@ Dists:"
          (loop for project in (list-projects)
                do (format *error-output* "~12t~a ~a~%" (version project) (name project))))))
 
-(defun main/add (url &key type name dist)
+(defun main/add (url &key type name dist verbose)
+  (ensure-storage)
   (let* ((name (or name (url-extract-name url)))
          (type (intern (string-upcase (or type "git")) "KEYWORD"))
          (project (or (project name)
-                      (make-instance 'project :name name :sources `((,type ,url))))))
+                      (progn (when verbose (verbose "Creating new project ~a" name))
+                             (make-instance 'project :name name :sources `((,type ,url)))))))
     (dolist (dist (or (enlist dist) (list-dists)) (setf (project name) project))
+      (when verbose (verbose "Adding project to dist ~a" (name dist)))
       (add-project project dist))))
 
-(defun main/add-dist (name &key url)
+(defun main/add-dist (name &key url verbose)
+  (ensure-storage)
   (let ((name (intern (string-upcase name) #.*package*)))
     (when (dist name)
       (error "A dist with this name already exists."))
     (when (or (null url) (string= "" url))
       (error "A canonical dist URL is required."))
+    (when verbose (verbose "Creating new dist ~a" name))
     (setf (dist name) (make-instance 'dist :name name :url url))))
 
-(defun main/remove (name &key dist)
+(defun main/remove (name &key dist verbose)
   (let ((project (or (project name)
                      (error "No project named ~s" name))))
     (dolist (dist (or (enlist dist) (list-dists)))
+      (when verbose (verbose "Removing project from dist ~a" (name dist)))
       (remove-project project dist))))
 
 (defun main/replicate (url &key name verbose latest-only skip-archives)
+  (ensure-storage)
   (replicate-dist url :name name
                       :verbose verbose
                       :current-version-only latest-only
@@ -305,6 +312,7 @@ Dists:"
                                     (error "No dist named ~s" dist)))))))
 
 (defun main/install (&key enable (interval "monthly"))
+  (ensure-storage)
   (create-systemd-service :enable enable :interval interval))
 
 (defun main/test (dist &key update verbose jobs)
@@ -390,7 +398,9 @@ Dists:"
                                                             #\j :jobs #\l :latest-only
                                                             #\s :skip-archives
                                                             #\i :interval #\e :enable)))
-          (when *storage* (store T T T)))))
+          (when *storage*
+            (verbose "Offloading to ~a" *storage*)
+            (store T T T)))))
     (uiop:quit)))
 
 ;; Sigh.
