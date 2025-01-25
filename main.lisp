@@ -122,10 +122,17 @@ add                   Add a new project or add a project to a dist
   -d --dist dist         The dist to add the project to. Can be
                          specified multiple times. If unspecified,
                          adds to all dists
+  -v --verbose           To print verbose output about the progress
 
 add-dist              Add a new dist
   name                   The name of the dist to create
   --url url              The canonical URL at which the dist resides
+  --versioning scheme    The scheme to use to create new dist version
+                         identifiers. Can be one of:
+                           integer
+                           timestamp  (default)
+                           date
+  -v --verbose           To print verbose output about the progress
 
 remove                Remove a project from dists
   name                   The name of the project to remove
@@ -272,7 +279,7 @@ Dists:"
       (when verbose (verbose "Adding project to dist ~a" (name dist)))
       (add-project project dist))))
 
-(defun main/add-dist (name &key url verbose)
+(defun main/add-dist (name &key url verbose (versioning "timestamp"))
   (ensure-storage)
   (let ((name (intern (string-upcase name) #.*package*)))
     (when (dist name)
@@ -280,7 +287,12 @@ Dists:"
     (when (or (null url) (string= "" url))
       (error "A canonical dist URL is required."))
     (when verbose (verbose "Creating new dist ~a" name))
-    (setf (dist name) (make-instance 'dist :name name :url url))))
+    (setf (dist name) (make-instance (cond ((string= "integer" versioning) 'integer-versioned-dist)
+                                           ((string= "timestamp" versioning) 'timestamp-versioned-dist)
+                                           ((string= "date" versioning) 'date-versioned-dist)
+                                           (T (error "Unknown versioning scheme ~s" versioning)))
+                                     :name name
+                                     :url url))))
 
 (defun main/remove (name &key dist verbose)
   (let ((project (or (project name)
@@ -391,7 +403,7 @@ Dists:"
           (with-envvar (val "STORAGE_FILE")
             (setf *storage-file* (pathname-utils:parse-native-namestring val :as :file)))
           (try-open-storage)
-          (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite :latest-only :skip-archives :enable)
+          (apply #'funcall cmdfun (parse-args args :flags '(:verbose :update :force :overwrite :latest-only :skip-archives :enable :versioning)
                                                    :chars '(#\v :verbose #\u :update #\f :force
                                                             #\d :dist #\p :project #\n :version
                                                             #\n :name #\t :type #\x :overwrite
