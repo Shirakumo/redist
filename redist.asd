@@ -4,9 +4,9 @@
   :author "Yukari Hafner <shinmera@tymoon.eu>"
   :maintainer "Yukari Hafner <shinmera@tymoon.eu>"
   :description "An extensive system to manage and create quicklisp distributions."
-  :homepage "https://Shirakumo.github.io/redist/"
-  :bug-tracker "https://github.com/Shirakumo/redist/issues"
-  :source-control (:git "https://github.com/Shirakumo/redist.git")
+  :homepage "https://shirakumo.org/docs/redist/"
+  :bug-tracker "https://shirakumo.org/project/redist/issues"
+  :source-control (:git "https://shirakumo.org/project/redist.git")
   :in-order-to ((asdf:build-op (asdf:build-op :redist/standalone)))
   :serial T
   :components ((:file "package")

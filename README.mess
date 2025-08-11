@@ -10,7 +10,7 @@ This is a system implementing facilities to produce Quicklisp distributions. Spe
 7. A testing system to allow compiling each of the systems in a dist release, and verify that they still perform as expected.
 
 ## Quickstart (Binary)
-You can download a precompiled binary of Redist from the ''releases''(https://github.com/shirakumo/dist/releases/latest), or create it yourself by cloning Redist and using:
+You can download a precompiled binary of Redist from the ''releases''(https://shirakumo.org/project/dist/releases/latest), or create it yourself by cloning Redist and using:
 
 ::
 sbcl --eval '(asdf:make :redist)'
@@ -133,7 +133,7 @@ Along with the actual dist files, Redist also generates a set of HTML. Specifica
 
 This should help people explore the stuff you host on your servers without having to actually install the dist. It also helps to have a more interactive way to search through versions.
 
-If you would like to customise how the pages look, please have a look at the files in the ``template/`` directory. The HTML pages are generated using "Clip"(https://shinmera.github.io/clip), and the CSS is generated using "LASS"(https://shinmera.github.io/LASS).
+If you would like to customise how the pages look, please have a look at the files in the ``template/`` directory. The HTML pages are generated using "Clip"(https://shinmera.com/docs/clip), and the CSS is generated using "LASS"(https://shinmera.com/docs/LASS).
 
 ## Programs
 The following programs should be accessible for some features of Redist to operate:
